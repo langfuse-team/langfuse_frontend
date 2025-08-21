@@ -1,0 +1,263 @@
+/* WidgetDashboard.css */
+
+.widget-dashboard {
+  padding: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  color: #333;
+}
+
+/* 헤더 스타일 */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+}
+
+.header-title h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.info-icon {
+  background-color: #e0e0e0;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  margin-left: 10px;
+  color: #666;
+}
+
+.new-widget-btn {
+  background-color: #1a1a1a;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.new-widget-btn:hover {
+  background-color: #333;
+}
+
+/* 탭 네비게이션 */
+.tab-navigation {
+  margin-bottom: 20px;
+}
+
+.tab-border {
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.tab-btn {
+  padding: 10px 20px;
+  border: none;
+  background-color: transparent;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  color: #666;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.tab-btn:hover {
+  color: #333;
+}
+
+.tab-btn.active {
+  border-bottom-color: #6366f1;
+  color: #6366f1;
+  font-weight: 600;
+}
+
+/* 로딩 및 에러 */
+.loading {
+  padding: 40px;
+  text-align: center;
+  color: #666;
+}
+
+.error-message {
+  background-color: #fee;
+  color: #c00;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  border: 1px solid #fcc;
+}
+
+/* 테이블 스타일 */
+.table-container {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: white;
+}
+
+.widget-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-header {
+  background-color: #f9f9f9;
+}
+
+.table-header th {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+  font-weight: 500;
+  color: #555;
+  font-size: 14px;
+}
+
+.sortable-header {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sortable-header:hover {
+  background-color: #f0f0f0;
+}
+
+.table-row {
+  border-bottom: 1px solid #e0e0e0;
+  transition: background-color 0.1s;
+}
+
+.table-row:hover {
+  background-color: #f8f9fa;
+}
+
+.table-cell {
+  padding: 12px;
+  color: #333;
+  font-size: 14px;
+}
+
+.no-results {
+  padding: 60px;
+  text-align: center;
+  color: #666;
+  font-size: 16px;
+}
+
+/* 액션 버튼 */
+.action-btn {
+  background-color: transparent;
+  border: 1px solid #ccc;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #666;
+  transition: all 0.2s;
+}
+
+.action-btn:hover {
+  border-color: #999;
+  color: #333;
+}
+
+/* 페이지네이션 */
+.pagination-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.rows-per-page {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #666;
+}
+
+.rows-select {
+  padding: 5px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.pagination-info {
+  font-size: 14px;
+  color: #666;
+  margin-right: 15px;
+}
+
+.pagination-buttons {
+  display: flex;
+  gap: 2px;
+}
+
+.page-btn {
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  background-color: white;
+  cursor: pointer;
+  font-size: 12px;
+  color: #666;
+  transition: all 0.2s;
+}
+
+.page-btn:hover:not(:disabled) {
+  background-color: #f5f5f5;
+}
+
+.page-btn:disabled {
+  background-color: #f5f5f5;
+  color: #ccc;
+  cursor: not-allowed;
+}
+
+.page-btn:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.page-btn:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+  .widget-dashboard {
+    padding: 15px;
+  }
+  
+  .dashboard-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+  }
+  
+  .pagination-container {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+  }
+  
+  .table-container {
+    overflow-x: auto;
+  }
+  
+  .widget-table {
+    min-width: 800px;
+  }
+}

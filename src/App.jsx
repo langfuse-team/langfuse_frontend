@@ -1,15 +1,21 @@
+// src/App.jsx
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+
 // 새로운 폴더 구조에 맞춘 import 경로들
 import DashboardListPage from './features/dashboard/pages/DashboardListPage';
 import DashboardDetailPage from './features/dashboard/pages/DashboardDetailPage';
-import WidgetListPage from './features/widgets/pages/WidgetListPage';
-import WidgetEditPage from './features/widgets/pages/WidgetEditPage';
+import WidgetEditPage from './features/widgets/pages/WidgetEditPage.jsx';
 import PlaygroundPage1 from './features/playground1/pages/PlaygroundPage1';
 import PlaygroundPage2 from './features/playground2/pages/PlaygroundPage2';
 
+// ✅ 새로 만든 대시보드
+import WidgetDashboard from './features/widgets/components/WidgetDashboard';
+
 function Layout({ children }) {
   const location = useLocation();
+
+  const isActive = (path) => location.pathname === path;
 
   return (
     <div style={{ display: 'flex', height: '100vh' }}>
@@ -27,7 +33,7 @@ function Layout({ children }) {
             <Link to="/dashboards" style={{ 
               display: 'block', 
               padding: '8px', 
-              backgroundColor: location.pathname === '/dashboards' ? '#ddd' : 'white',
+              backgroundColor: isActive('/dashboards') ? '#ddd' : 'white',
               border: '1px solid #ccc',
               textDecoration: 'none',
               color: 'black'
@@ -40,7 +46,7 @@ function Layout({ children }) {
             <Link to="/dashboards/sample" style={{ 
               display: 'block', 
               padding: '8px', 
-              backgroundColor: location.pathname === '/dashboards/sample' ? '#ddd' : 'white',
+              backgroundColor: isActive('/dashboards/sample') ? '#ddd' : 'white',
               border: '1px solid #ccc',
               textDecoration: 'none',
               color: 'black'
@@ -53,7 +59,7 @@ function Layout({ children }) {
             <Link to="/widgets" style={{ 
               display: 'block', 
               padding: '8px', 
-              backgroundColor: location.pathname === '/widgets' ? '#ddd' : 'white',
+              backgroundColor: isActive('/widgets') ? '#ddd' : 'white',
               border: '1px solid #ccc',
               textDecoration: 'none',
               color: 'black'
@@ -66,7 +72,7 @@ function Layout({ children }) {
             <Link to="/widgets/new" style={{ 
               display: 'block', 
               padding: '8px', 
-              backgroundColor: location.pathname === '/widgets/new' ? '#ddd' : 'white',
+              backgroundColor: isActive('/widgets/new') ? '#ddd' : 'white',
               border: '1px solid #ccc',
               textDecoration: 'none',
               color: 'black'
@@ -79,7 +85,7 @@ function Layout({ children }) {
             <Link to="/widgets/sample" style={{ 
               display: 'block', 
               padding: '8px', 
-              backgroundColor: location.pathname === '/widgets/sample' ? '#ddd' : 'white',
+              backgroundColor: isActive('/widgets/sample') ? '#ddd' : 'white',
               border: '1px solid #ccc',
               textDecoration: 'none',
               color: 'black'
@@ -92,7 +98,7 @@ function Layout({ children }) {
             <Link to="/playground1" style={{ 
               display: 'block', 
               padding: '8px', 
-              backgroundColor: location.pathname === '/playground1' ? '#ddd' : 'white',
+              backgroundColor: isActive('/playground1') ? '#ddd' : 'white',
               border: '1px solid #ccc',
               textDecoration: 'none',
               color: 'black'
@@ -105,7 +111,7 @@ function Layout({ children }) {
             <Link to="/playground2" style={{ 
               display: 'block', 
               padding: '8px', 
-              backgroundColor: location.pathname === '/playground2' ? '#ddd' : 'white',
+              backgroundColor: isActive('/playground2') ? '#ddd' : 'white',
               border: '1px solid #ccc',
               textDecoration: 'none',
               color: 'black'
@@ -146,9 +152,12 @@ function App() {
           <Route path="/" element={<Navigate to="/dashboards" replace />} />
           <Route path="/dashboards" element={<DashboardListPage />} />
           <Route path="/dashboards/:dashboardId" element={<DashboardDetailPage />} />
-          <Route path="/widgets" element={<WidgetListPage />} />
+
+          {/* ✅ 여기서 WidgetDashboard로 교체 */}
+          <Route path="/widgets" element={<WidgetDashboard />} />
           <Route path="/widgets/:widgetId" element={<WidgetEditPage />} />
           <Route path="/widgets/new" element={<WidgetEditPage />} />
+
           <Route path="/playground1" element={<PlaygroundPage1 />} />
           <Route path="/playground2" element={<PlaygroundPage2 />} />
         </Routes>
