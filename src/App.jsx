@@ -1,11 +1,12 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
-import DashboardListPage from './pages/DashboardListPage';
-import DashboardDetailPage from './pages/DashboardDetailPage';
-import WidgetListPage from './pages/WidgetListPage';
-import WidgetEditPage from './pages/WidgetEditPage';
-import PlaygroundPage1 from './pages/PlaygroundPage1';
-import PlaygroundPage2 from './pages/PlaygroundPage2';
+// 새로운 폴더 구조에 맞춘 import 경로들
+import DashboardListPage from './features/dashboard/pages/DashboardListPage';
+import DashboardDetailPage from './features/dashboard/pages/DashboardDetailPage';
+import WidgetListPage from './features/widgets/pages/WidgetListPage';
+import WidgetEditPage from './features/widgets/pages/WidgetEditPage';
+import PlaygroundPage1 from './features/playground1/pages/PlaygroundPage1';
+import PlaygroundPage2 from './features/playground2/pages/PlaygroundPage2';
 
 function Layout({ children }) {
   const location = useLocation();
