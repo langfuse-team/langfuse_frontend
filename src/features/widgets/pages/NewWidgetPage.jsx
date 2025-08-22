@@ -98,7 +98,7 @@ const NewWidgetPage = () => {
     }));
   };
 
-  // 미리보기(실데이터: Metrics API)
+  // 미리보기(실데이터: Public API)
   const updatePreviewData = async (config) => {
     try {
       setPreviewLoading(true);
@@ -375,18 +375,27 @@ const NewWidgetPage = () => {
                     <div className="chart-summary">Total: {previewData.count}</div>
                     <div className="chart-container">
                       <div className="simple-chart">
-                        {previewData.chartData.map((point, index) => {
-                          const max = Math.max(...previewData.chartData.map((p) => p.value), 0);
-                          const pct = max > 0 ? (point.value / max) * 100 : 0;
-                          return (
-                            <div key={index} className="chart-bar-wrapper">
-                              <div className="chart-bar" style={{ height: `${pct}%` }}>
-                                <span className="bar-value">{point.value}</span>
+                        {(() => {
+                          const values = previewData.chartData.map((p) => p.y);
+                          const max = Math.max(0, ...values);
+                          return previewData.chartData.map((point, index) => {
+                            const pct = max > 0 ? (point.y / max) * 100 : 0;
+                            const label = new Date(point.x).toLocaleString(undefined, {
+                              month: 'numeric',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            });
+                            return (
+                              <div key={index} className="chart-bar-wrapper">
+                                <div className="chart-bar" style={{ height: `${pct}%` }}>
+                                  <span className="bar-value">{point.y}</span>
+                                </div>
+                                <div className="bar-label">{label}</div>
                               </div>
-                              <div className="bar-label">{point.date}</div>
-                            </div>
-                          );
-                        })}
+                            );
+                          });
+                        })()}
                       </div>
                     </div>
                   </>

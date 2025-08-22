@@ -19,38 +19,36 @@ class WidgetAPI {
   getHeaders() {
     const credentials = btoa(`${this.publicKey}:${this.secretKey}`);
     return {
-      'Authorization': `Basic ${credentials}`,
+      Authorization: `Basic ${credentials}`,
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      Accept: 'application/json',
       'x-langfuse-project-id': this.projectId,
     };
   }
 
   /**
-   * 미리보기용 시계열(실데이터): Open API의 /traces 만 이용해서
-   * from~to 사이를 일(day) 단위로 버킷팅하여 count 시계열을 만든다.
-   * (내부/가변 엔드포인트인 /metrics*, /metrics/timeseries 는 전혀 사용하지 않음)
+   * 미리보기용 시계열(실데이터): /public/traces 만 사용
+   * from~to 사이를 일(day) 단위로 버킷팅하여 {x,y} 포맷으로 반환
    */
   async getPreviewTimeseriesFromTraces({
     from, // ISO string
     to,   // ISO string
-    interval = 'day', // 현재 day만 사용
-    filters = [],     // [{column, operator, value}] — 서버가 무시할 수도 있어, 클라에서 범위 필터링도 수행
+    interval = 'day', // 현재 day만
+    filters = [],
   } = {}) {
     const headers = this.getHeaders();
 
     const start = new Date(from);
-    const end   = new Date(to);
+    const end = new Date(to);
 
-    const keyOf   = (d) => d.toISOString().slice(0, 10); // YYYY-MM-DD
-    const labelOf = (d) => d.toISOString().slice(5, 10); //   MM-DD
+    const keyOfDay = (d) => d.toISOString().slice(0, 10); // YYYY-MM-DD
 
-    // 기간의 day 버킷 초기화
+    // 기간 day 버킷 초기화
     const days = [];
     for (const d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
       days.push(new Date(d));
     }
-    const buckets = new Map(days.map(dt => [keyOf(dt), 0]));
+    const buckets = new Map(days.map((dt) => [keyOfDay(dt), 0]));
 
     // traces 페이지네이션 수집
     let page = 1;
@@ -63,20 +61,32 @@ class WidgetAPI {
     };
 
     for (let i = 0; i < MAX_PAGES; i++) {
-      const qs = new URLSearchParams({ page: String(page), limit: String(limit) });
-      // 서버가 필터를 지원한다면 전달(무시될 수도 있음)
-      if (filters && filters.length) qs.set('filters', JSON.stringify(filters));
+      const qs = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+        _: String(Date.now()),
+      });
+      if (filters?.length) qs.set('filters', JSON.stringify(filters));
 
-      const res = await fetch(`${this.baseURL}/traces?${qs}`, { method: 'GET', headers });
+      const res = await fetch(`${this.baseURL}/traces?${qs}`, {
+        method: 'GET',
+        headers,
+        credentials: 'include',
+      });
       if (!res.ok) break;
 
       const json = await res.json();
       const rows = Array.isArray(json?.data) ? json.data : [];
 
       for (const t of rows) {
-        const ts = t.timestamp || t.startTime || t.createdAt || t.start_time || t.started_at;
+        const ts =
+          t?.timestamp ||
+          t?.startTime ||
+          t?.createdAt ||
+          t?.start_time ||
+          t?.started_at;
         if (!ts || !inRange(ts)) continue;
-        const k = keyOf(new Date(ts));
+        const k = keyOfDay(new Date(ts));
         buckets.set(k, (buckets.get(k) || 0) + 1); // count
       }
 
@@ -85,22 +95,37 @@ class WidgetAPI {
       page += 1;
     }
 
-    const chartData = days.map(dt => ({ date: labelOf(dt), value: buckets.get(keyOf(dt)) || 0 }));
-    const count = chartData.reduce((s, p) => s + p.value, 0);
-    return { count, chartData };
+    // 원본 위젯 스타일에 맞춘 {x(ISO), y} 포맷 + UTC 자정 정렬
+    const points = days.map((dt) => {
+      const x = new Date(
+        Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate(), 0, 0, 0)
+      ).toISOString(); // 브라우저가 KST면 09:00처럼 보임(정상)
+      const y = buckets.get(keyOfDay(dt)) || 0;
+      return { x, y };
+    });
+
+    const count = points.reduce((s, p) => s + p.y, 0);
+    return { count, chartData: points };
   }
 
-  // 위젯 목록 가져오기 - 트레이스 데이터를 위젯처럼 변환 (Open API /traces)
+  // NewWidgetPage가 기대하는 이름(래핑)
+  async getMetricsPreview({ view = 'traces', from, to, interval = 'day', filters = [], metric, aggregation } = {}) {
+    return this.getPreviewTimeseriesFromTraces({ from, to, interval, filters });
+  }
+
+  // 위젯 목록: /public/traces를 위젯 비슷하게 변환
   async getWidgets(page = 1, limit = 50) {
     try {
       const params = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
+        page: String(page),
+        limit: String(limit),
+        _: String(Date.now()),
       });
 
       const response = await fetch(`${this.baseURL}/traces?${params}`, {
         method: 'GET',
         headers: this.getHeaders(),
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -120,11 +145,8 @@ class WidgetAPI {
       }
 
       const data = await response.json();
-
-      // 로컬 위젯(생성 API가 없어서 임시 저장)
       const localWidgets = JSON.parse(localStorage.getItem('lf_custom_widgets') || '[]');
 
-      // 트레이스를 위젯형으로 맵핑
       const traceWidgets = (data.data || []).map((trace) => {
         const created =
           trace.timestamp ||
@@ -132,11 +154,7 @@ class WidgetAPI {
           trace.createdAt ||
           trace.start_time ||
           trace.started_at;
-        const updated =
-          trace.updatedAt ||
-          trace.endTime ||
-          trace.timestamp ||
-          created;
+        const updated = trace.updatedAt || trace.endTime || trace.timestamp || created;
 
         return {
           id: trace.id,
@@ -157,8 +175,7 @@ class WidgetAPI {
         meta: data.meta || {},
         totalItems: data.meta?.totalItems || 0,
         currentPage: data.meta?.page || page,
-        totalPages:
-          data.meta?.totalPages || Math.ceil((data.meta?.totalItems || 0) / limit),
+        totalPages: data.meta?.totalPages || Math.ceil((data.meta?.totalItems || 0) / limit),
       };
     } catch (error) {
       console.error('위젯 목록 가져오기 오류:', error);
@@ -174,7 +191,7 @@ class WidgetAPI {
     }
   }
 
-  // 위젯 "저장" - 퍼블릭 REST에 위젯 생성 API가 없으므로 임시로 로컬 저장
+  // 위젯 "저장": Public API에 생성이 없어서 로컬 저장(임시)
   async createWidget(widgetData) {
     try {
       const KEY = 'lf_custom_widgets';
@@ -201,7 +218,7 @@ class WidgetAPI {
     }
   }
 
-  // 삭제: 로컬 위젯 → localStorage 제거, 그 외 → 트레이스 삭제(Open API)
+  // 삭제: 로컬 위젯 → localStorage 제거, 실 데이터 → trace 삭제
   async deleteWidget(widgetId) {
     try {
       if (String(widgetId).startsWith('local-')) {
@@ -215,6 +232,7 @@ class WidgetAPI {
       const resp = await fetch(`${this.baseURL}/traces/${widgetId}`, {
         method: 'DELETE',
         headers: this.getHeaders(),
+        credentials: 'include',
       });
 
       if (resp.status === 204 || resp.ok) {
@@ -238,80 +256,68 @@ class WidgetAPI {
 
   // 기타 Open API 보조 조회
   async getTraces(page = 1, limit = 50, filters = []) {
-    try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
-      });
-      if (filters.length > 0) params.append('filters', JSON.stringify(filters));
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+      _: String(Date.now()),
+    });
+    if (filters.length) params.append('filters', JSON.stringify(filters));
 
-      const response = await fetch(`${this.baseURL}/traces?${params}`, {
-        method: 'GET',
-        headers: this.getHeaders(),
-      });
-      if (!response.ok) throw new Error(`트레이스 조회 오류: ${response.status}`);
-      return await response.json();
-    } catch (error) {
-      console.error('트레이스 조회 오류:', error);
-      throw error;
-    }
+    const response = await fetch(`${this.baseURL}/traces?${params}`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+      credentials: 'include',
+    });
+    if (!response.ok) throw new Error(`트레이스 조회 오류: ${response.status}`);
+    return await response.json();
   }
 
   async getSessions(page = 1, limit = 50) {
-    try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
-      });
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+      _: String(Date.now()),
+    });
 
-      const response = await fetch(`${this.baseURL}/sessions?${params}`, {
-        method: 'GET',
-        headers: this.getHeaders(),
-      });
-      if (!response.ok) throw new Error(`세션 조회 오류: ${response.status}`);
-      return await response.json();
-    } catch (error) {
-      console.error('세션 조회 오류:', error);
-      throw error;
-    }
+    const response = await fetch(`${this.baseURL}/sessions?${params}`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+      credentials: 'include',
+    });
+    if (!response.ok) throw new Error(`세션 조회 오류: ${response.status}`);
+    return await response.json();
   }
 
   async getObservations(page = 1, limit = 50) {
-    try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
-      });
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+      _: String(Date.now()),
+    });
 
-      const response = await fetch(`${this.baseURL}/observations?${params}`, {
-        method: 'GET',
-        headers: this.getHeaders(),
-      });
-      if (!response.ok) throw new Error(`관찰 데이터 조회 오류: ${response.status}`);
-      return await response.json();
-    } catch (error) {
-      console.error('관찰 데이터 조회 오류:', error);
-      throw error;
-    }
+    const response = await fetch(`${this.baseURL}/observations?${params}`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+      credentials: 'include',
+    });
+    if (!response.ok) throw new Error(`관찰 데이터 조회 오류: ${response.status}`);
+    return await response.json();
   }
 
   async getScores(page = 1, limit = 50) {
-    try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
-      });
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+      _: String(Date.now()),
+    });
 
-      const response = await fetch(`${this.baseURL}/scores?${params}`, {
-        method: 'GET',
-        headers: this.getHeaders(),
-      });
-      if (!response.ok) throw new Error(`점수 데이터 조회 오류: ${response.status}`);
-      return await response.json();
-    } catch (error) {
-      console.error('점수 데이터 조회 오류:', error);
-      throw error;
-    }
+    const response = await fetch(`${this.baseURL}/scores?${params}`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+      credentials: 'include',
+    });
+    if (!response.ok) throw new Error(`점수 데이터 조회 오류: ${response.status}`);
+    return await response.json();
   }
 
   async testConnection() {
@@ -319,6 +325,7 @@ class WidgetAPI {
       const response = await fetch(`${this.baseURL}/health`, {
         method: 'GET',
         headers: this.getHeaders(),
+        credentials: 'include',
       });
       return response.ok;
     } catch (error) {
@@ -353,7 +360,7 @@ class WidgetAPI {
       { value: 'sum', label: 'Sum' },
       { value: 'min', label: 'Min' },
       { value: 'max', label: 'Max' },
-      { value: 'p50', label: 'Median (P50)'},
+      { value: 'p50', label: 'Median (P50)' },
       { value: 'p90', label: 'P90' },
       { value: 'p95', label: 'P95' },
       { value: 'p99', label: 'P99' },
@@ -362,10 +369,10 @@ class WidgetAPI {
 
   validateWidgetConfig(config) {
     const errors = [];
-    if (!config.name || config.name.trim() === '') errors.push('위젯 이름을 입력해주세요.');
+    if (!config.name?.trim()) errors.push('위젯 이름을 입력해주세요.');
     if (!config.view) errors.push('View를 선택해주세요.');
     if (!config.chartType) errors.push('차트 타입을 선택해주세요.');
-    if (!config.metrics || config.metrics.length === 0) errors.push('최소 하나의 메트릭을 선택해주세요.');
+    if (!config.metrics?.length) errors.push('최소 하나의 메트릭을 선택해주세요.');
     return { isValid: errors.length === 0, errors };
   }
 }
