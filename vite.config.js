@@ -1,20 +1,32 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import path from 'path'
 
 export default defineConfig({
-  plugins: [react()],
+  base: '/',
   server: {
-    host: '127.0.0.1',   // 또는 '0.0.0.0' (회사망/보안툴 따라 둘 다 시도)
-    port: 6006,          // 프론트 전용 포트 (3000과 별개)
-    strictPort: false,   // 막히면 자동으로 6007, 6008 …로 올라감
+    host: '0.0.0.0',     // 팀원들 간 네트워크 접근 가능
+    port: 6006,          // 팀원이 변경한 포트 유지
+    strictPort: false,   // 포트가 막히면 자동으로 6007, 6008로 증가
     proxy: {
       '/api': {
         target: 'http://localhost:3000', // Langfuse 백엔드
         changeOrigin: true,
         ws: true,
-        // 백엔드 라우트가 /api 프리픽스가 없다면 주석 해제:
+        // 필요시 주석 해제:
         // rewrite: p => p.replace(/^\/api/, ''),
       }
     }
+  },
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve('./src'),
+      '@/components': path.resolve('./src/components'),
+      '@/lib': path.resolve('./src/lib'),
+      '@/pages': path.resolve('./src/pages'),
+      '@/api': path.resolve('./src/api'),
+    },
+    extensions: ['.js', '.jsx']
   }
 })

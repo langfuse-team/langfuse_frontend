@@ -1,140 +1,108 @@
 // src/App.jsx
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, NavLink, useLocation } from 'react-router-dom';
+import './App.css'; // CSS 파일 import
 
-// 새로운 폴더 구조에 맞춘 import 경로들
+// 대시보드 관련 imports
 import DashboardListPage from './features/dashboard/pages/DashboardListPage';
 import DashboardDetailPage from './features/dashboard/pages/DashboardDetailPage';
+import NewDashboardPage from './features/dashboard/pages/NewDashboardPage';
+
+// 위젯 관련 imports
 import WidgetEditPage from './features/widgets/pages/WidgetEditPage.jsx';
+import WidgetDashboard from './features/widgets/components/WidgetDashboard';
+
+// 플레이그라운드 관련 imports
 import PlaygroundPage1 from './features/playground1/pages/PlaygroundPage1';
 import PlaygroundPage2 from './features/playground2/pages/PlaygroundPage2';
-
-// ✅ 새로 만든 대시보드
-import WidgetDashboard from './features/widgets/components/WidgetDashboard';
 
 function Layout({ children }) {
   const location = useLocation();
 
-  const isActive = (path) => location.pathname === path;
-
   return (
-    <div style={{ display: 'flex', height: '100vh' }}>
+    <div className="app-layout">
       {/* 사이드바 */}
-      <nav style={{
-        width: '200px',
-        backgroundColor: '#f5f5f5',
-        border: '1px solid #ddd',
-        padding: '20px'
-      }}>
-        <h3 style={{ margin: '0 0 20px 0' }}>Langfuse</h3>
+      <nav className="sidebar">
+        <h3 className="sidebar-title">Langfuse</h3>
         
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-          <li style={{ marginBottom: '10px' }}>
-            <Link to="/dashboards" style={{ 
-              display: 'block', 
-              padding: '8px', 
-              backgroundColor: isActive('/dashboards') ? '#ddd' : 'white',
-              border: '1px solid #ccc',
-              textDecoration: 'none',
-              color: 'black'
-            }}>
+        <ul className="sidebar-nav">
+          <li className="sidebar-nav-item">
+            <NavLink 
+              to="/dashboards" 
+              className={({ isActive }) => `sidebar-nav-link ${isActive ? 'active' : ''}`}
+            >
               Dashboard 목록
-            </Link>
+            </NavLink>
           </li>
           
-          <li style={{ marginBottom: '10px' }}>
-            <Link to="/dashboards/sample" style={{ 
-              display: 'block', 
-              padding: '8px', 
-              backgroundColor: isActive('/dashboards/sample') ? '#ddd' : 'white',
-              border: '1px solid #ccc',
-              textDecoration: 'none',
-              color: 'black'
-            }}>
-              Dashboard 상세
-            </Link>
+          <li className="sidebar-nav-item">
+            <NavLink 
+              to="/dashboards/new" 
+              className={({ isActive }) => `sidebar-nav-link ${isActive ? 'active' : ''}`}
+            >
+              새 Dashboard
+            </NavLink>
           </li>
 
-          <li style={{ marginBottom: '10px' }}>
-            <Link to="/widgets" style={{ 
-              display: 'block', 
-              padding: '8px', 
-              backgroundColor: isActive('/widgets') ? '#ddd' : 'white',
-              border: '1px solid #ccc',
-              textDecoration: 'none',
-              color: 'black'
-            }}>
+          <li className="sidebar-nav-item">
+            <NavLink 
+              to="/dashboards/sample" 
+              className={({ isActive }) => `sidebar-nav-link ${isActive ? 'active' : ''}`}
+            >
+              Dashboard 상세 (샘플)
+            </NavLink>
+          </li>
+
+          <li className="sidebar-nav-item">
+            <NavLink 
+              to="/widgets" 
+              className={({ isActive }) => `sidebar-nav-link ${isActive ? 'active' : ''}`}
+            >
               Widget 목록
-            </Link>
+            </NavLink>
           </li>
 
-          <li style={{ marginBottom: '10px' }}>
-            <Link to="/widgets/new" style={{ 
-              display: 'block', 
-              padding: '8px', 
-              backgroundColor: isActive('/widgets/new') ? '#ddd' : 'white',
-              border: '1px solid #ccc',
-              textDecoration: 'none',
-              color: 'black'
-            }}>
+          <li className="sidebar-nav-item">
+            <NavLink 
+              to="/widgets/new" 
+              className={({ isActive }) => `sidebar-nav-link ${isActive ? 'active' : ''}`}
+            >
               새 Widget
-            </Link>
+            </NavLink>
           </li>
 
-          <li style={{ marginBottom: '10px' }}>
-            <Link to="/widgets/sample" style={{ 
-              display: 'block', 
-              padding: '8px', 
-              backgroundColor: isActive('/widgets/sample') ? '#ddd' : 'white',
-              border: '1px solid #ccc',
-              textDecoration: 'none',
-              color: 'black'
-            }}>
-              Widget 편집
-            </Link>
+          <li className="sidebar-nav-item">
+            <NavLink 
+              to="/widgets/sample" 
+              className={({ isActive }) => `sidebar-nav-link ${isActive ? 'active' : ''}`}
+            >
+              Widget 편집 (샘플)
+            </NavLink>
           </li>
 
-          <li style={{ marginBottom: '10px' }}>
-            <Link to="/playground1" style={{ 
-              display: 'block', 
-              padding: '8px', 
-              backgroundColor: isActive('/playground1') ? '#ddd' : 'white',
-              border: '1px solid #ccc',
-              textDecoration: 'none',
-              color: 'black'
-            }}>
+          <li className="sidebar-nav-item">
+            <NavLink 
+              to="/playground1" 
+              className={({ isActive }) => `sidebar-nav-link ${isActive ? 'active' : ''}`}
+            >
               Playground 1
-            </Link>
+            </NavLink>
           </li>
 
-          <li style={{ marginBottom: '10px' }}>
-            <Link to="/playground2" style={{ 
-              display: 'block', 
-              padding: '8px', 
-              backgroundColor: isActive('/playground2') ? '#ddd' : 'white',
-              border: '1px solid #ccc',
-              textDecoration: 'none',
-              color: 'black'
-            }}>
+          <li className="sidebar-nav-item">
+            <NavLink 
+              to="/playground2" 
+              className={({ isActive }) => `sidebar-nav-link ${isActive ? 'active' : ''}`}
+            >
               Playground 2
-            </Link>
+            </NavLink>
           </li>
         </ul>
       </nav>
 
-      {/* 메인 */}
-      <main style={{
-        flex: 1,
-        backgroundColor: 'white',
-        border: '1px solid #ddd',
-        padding: '20px'
-      }}>
-        <div style={{
-          backgroundColor: '#f9f9f9',
-          border: '1px solid #ccc',
-          padding: '10px',
-          marginBottom: '20px'
-        }}>
+      {/* 메인 콘텐츠 */}
+      <main className="main-content">
+        <div className="page-indicator">
           <strong>현재 페이지: {location.pathname}</strong>
         </div>
         
@@ -150,14 +118,18 @@ function App() {
       <Layout>
         <Routes>
           <Route path="/" element={<Navigate to="/dashboards" replace />} />
+          
+          {/* Dashboard 관련 라우트 */}
           <Route path="/dashboards" element={<DashboardListPage />} />
+          <Route path="/dashboards/new" element={<NewDashboardPage />} />
           <Route path="/dashboards/:dashboardId" element={<DashboardDetailPage />} />
-
-          {/* ✅ 여기서 WidgetDashboard로 교체 */}
+          
+          {/* Widget 관련 라우트 */}
           <Route path="/widgets" element={<WidgetDashboard />} />
-          <Route path="/widgets/:widgetId" element={<WidgetEditPage />} />
           <Route path="/widgets/new" element={<WidgetEditPage />} />
-
+          <Route path="/widgets/:widgetId" element={<WidgetEditPage />} />
+          
+          {/* Playground 관련 라우트 */}
           <Route path="/playground1" element={<PlaygroundPage1 />} />
           <Route path="/playground2" element={<PlaygroundPage2 />} />
         </Routes>
