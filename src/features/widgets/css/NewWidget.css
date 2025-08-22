@@ -1,0 +1,490 @@
+/* NewWidget.css - 완성 버전 */
+.new-widget-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 30px;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 15px;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.back-btn {
+  padding: 8px 16px;
+  background-color: #f9fafb;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  color: #374151;
+  text-decoration: none;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.back-btn:hover {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.info-icon {
+  margin-left: 10px;
+  width: 20px;
+  height: 20px;
+  border: 1px solid #d1d5db;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #6b7280;
+  background-color: #f9fafb;
+  cursor: help;
+}
+
+.widget-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  min-height: 600px;
+}
+
+/* 왼쪽 설정 영역 */
+.widget-configuration {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.config-section h2 {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.config-description {
+  margin: 0 0 24px 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.form-section {
+  margin-bottom: 24px;
+}
+
+.form-section h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+/* 폼 입력 요소들 */
+.form-input,
+.form-textarea,
+.form-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  background-color: white;
+  color: #374151;
+  box-sizing: border-box;
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.form-input:focus,
+.form-textarea:focus,
+.form-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* 메트릭 선택기 */
+.metric-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.metric-column,
+.metric-aggregation {
+  width: 100%;
+}
+
+/* 필터 관련 */
+.filter-row {
+  display: grid;
+  grid-template-columns: 1fr 120px 1fr 40px;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+
+.filter-column,
+.filter-operator,
+.filter-value {
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.remove-filter-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #ef4444;
+  background-color: #fee2e2;
+  color: #dc2626;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: all 0.2s;
+}
+
+.remove-filter-btn:hover {
+  background-color: #fecaca;
+  border-color: #dc2626;
+}
+
+.add-filter-btn {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px dashed #d1d5db;
+  border-radius: 6px;
+  background-color: transparent;
+  color: #6b7280;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.add-filter-btn:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+.add-filter-btn span {
+  margin-right: 6px;
+  font-weight: bold;
+}
+
+/* 버튼 액션 영역 */
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.cancel-btn,
+.save-widget-btn {
+  flex: 1;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.cancel-btn {
+  background-color: #f9fafb;
+  border: 1px solid #d1d5db;
+  color: #374151;
+}
+
+.cancel-btn:hover {
+  background-color: #f3f4f6;
+}
+
+.save-widget-btn {
+  background-color: #1f2937;
+  color: white;
+}
+
+.save-widget-btn:hover:not(:disabled) {
+  background-color: #111827;
+}
+
+.save-widget-btn:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* 오른쪽 미리보기 영역 */
+.widget-preview {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.preview-header h2 {
+  margin: 0 0 6px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.preview-description {
+  margin: 0 0 24px 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.preview-content {
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.preview-chart {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 숫자형 차트 */
+.chart-number {
+  text-align: center;
+}
+
+.number-value {
+  font-size: 48px;
+  font-weight: 300;
+  color: #111827;
+  margin-bottom: 8px;
+}
+
+.number-label {
+  font-size: 14px;
+  color: #6b7280;
+  text-transform: capitalize;
+}
+
+/* 차트 요약 */
+.chart-summary {
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #374151;
+}
+
+/* 차트 컨테이너 */
+.chart-container {
+  width: 100%;
+  max-width: 500px;
+}
+
+.simple-chart {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  height: 200px;
+  padding: 20px 0;
+  border-bottom: 1px solid #e5e7eb;
+  gap: 8px;
+}
+
+.chart-bar-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.chart-bar {
+  width: 100%;
+  max-width: 40px;
+  background: linear-gradient(to top, #3b82f6, #60a5fa);
+  border-radius: 4px 4px 0 0;
+  min-height: 4px;
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 4px;
+}
+
+.bar-value {
+  font-size: 11px;
+  color: white;
+  font-weight: 500;
+}
+
+.bar-label {
+  margin-top: 8px;
+  font-size: 10px;
+  color: #6b7280;
+  text-align: center;
+  transform: rotate(-45deg);
+  width: 60px;
+  line-height: 1.1;
+}
+
+/* 기존 차트 스타일 (호환성) */
+.chart-value {
+  font-size: 48px;
+  font-weight: 300;
+  color: #111827;
+  margin-bottom: 40px;
+}
+
+.chart-timeline {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  width: 100%;
+  height: 200px;
+  position: relative;
+}
+
+.chart-timeline::before {
+  content: '';
+  position: absolute;
+  bottom: 30px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background-color: #e5e7eb;
+}
+
+.chart-point {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.point-value {
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.point-date {
+  font-size: 11px;
+  color: #9ca3af;
+  writing-mode: horizontal-tb;
+  text-align: center;
+  width: 80px;
+  line-height: 1.2;
+}
+
+.chart-point::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background-color: #3b82f6;
+  border-radius: 50%;
+  margin-bottom: 6px;
+}
+
+.chart-timeline::after {
+  content: '';
+  position: absolute;
+  bottom: 27px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(to right, #3b82f6, #3b82f6);
+  opacity: 0.5;
+}
+
+.error-message {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  color: #dc2626;
+  font-size: 14px;
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+  .widget-content {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .metric-selector {
+    grid-template-columns: 1fr;
+  }
+  
+  .filter-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+  }
+  
+  .chart-timeline,
+  .simple-chart {
+    height: 150px;
+  }
+  
+  .chart-value,
+  .number-value {
+    font-size: 36px;
+    margin-bottom: 30px;
+  }
+  
+  .bar-label {
+    transform: none;
+    width: auto;
+  }
+}

@@ -11,6 +11,7 @@ import NewDashboardPage from './features/dashboard/pages/NewDashboardPage';
 // 위젯 관련 imports
 import WidgetEditPage from './features/widgets/pages/WidgetEditPage.jsx';
 import WidgetDashboard from './features/widgets/components/WidgetDashboard';
+import NewWidgetPage from './features/widgets/pages/NewWidgetPage.jsx'; // 새로 추가
 
 // 플레이그라운드 관련 imports
 import PlaygroundPage1 from './features/playground1/pages/PlaygroundPage1';
@@ -73,15 +74,6 @@ function Layout({ children }) {
 
           <li className="sidebar-nav-item">
             <NavLink 
-              to="/widgets/sample" 
-              className={({ isActive }) => `sidebar-nav-link ${isActive ? 'active' : ''}`}
-            >
-              Widget 편집 (샘플)
-            </NavLink>
-          </li>
-
-          <li className="sidebar-nav-item">
-            <NavLink 
               to="/playground1" 
               className={({ isActive }) => `sidebar-nav-link ${isActive ? 'active' : ''}`}
             >
@@ -126,7 +118,7 @@ function App() {
           
           {/* Widget 관련 라우트 */}
           <Route path="/widgets" element={<WidgetDashboard />} />
-          <Route path="/widgets/new" element={<WidgetEditPage />} />
+          <Route path="/widgets/new" element={<NewWidgetPage />} />
           <Route path="/widgets/:widgetId" element={<WidgetEditPage />} />
           
           {/* Playground 관련 라우트 */}

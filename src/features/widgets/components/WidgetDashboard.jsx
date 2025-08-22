@@ -1,16 +1,19 @@
 // WidgetDashboard.jsx
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import widgetAPI from '../services/widgetAPI.js';
 import '../css/WidgetDashboard.css';
 
 const WidgetDashboard = () => {
+  const navigate = useNavigate();
   const [widgets, setWidgets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
   const [totalPages, setTotalPages] = useState(0);
-//   const [totalItems, setTotalItems] = useState(0);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [widgetToDelete, setWidgetToDelete] = useState(null);
 
   // 데이터 로드 함수
   const loadWidgets = async () => {
@@ -22,7 +25,6 @@ const WidgetDashboard = () => {
       
       setWidgets(result.data);
       setTotalPages(result.totalPages);
-    //   setTotalItems(result.totalItems);
       
       if (!result.success && result.error) {
         setError(result.error);
@@ -70,14 +72,43 @@ const WidgetDashboard = () => {
     setCurrentPage(1);
   };
 
-  // 새 위젯 생성 (임시)
+  // 새 위젯 생성
   const handleNewWidget = () => {
-    alert('새 위젯 생성 기능은 추후 구현 예정입니다.');
+    navigate('/widgets/new');
   };
 
-  // 위젯 액션 (임시)
-  const handleWidgetAction = (widgetId) => {
-    alert(`위젯 ${widgetId}에 대한 액션`);
+  // 삭제 확인 모달 열기
+  const handleDeleteClick = (widget) => {
+    setWidgetToDelete(widget);
+    setShowDeleteConfirm(true);
+  };
+
+  // 위젯 삭제
+  const handleDeleteWidget = async () => {
+    if (!widgetToDelete) return;
+
+    try {
+      // widgetAPI에 deleteWidget 메서드가 있다고 가정
+      const result = await widgetAPI.deleteWidget(widgetToDelete.id);
+      
+      if (result.success) {
+        // 성공적으로 삭제되면 목록 새로고침
+        await loadWidgets();
+        setShowDeleteConfirm(false);
+        setWidgetToDelete(null);
+      } else {
+        alert('위젯 삭제에 실패했습니다.');
+      }
+    } catch (err) {
+      console.error('삭제 오류:', err);
+      alert('위젯 삭제 중 오류가 발생했습니다.');
+    }
+  };
+
+  // 삭제 취소
+  const handleCancelDelete = () => {
+    setShowDeleteConfirm(false);
+    setWidgetToDelete(null);
   };
 
   if (loading) {
@@ -150,10 +181,11 @@ const WidgetDashboard = () => {
                   <td className="table-cell">{formatDate(widget.updatedAt)}</td>
                   <td className="table-cell">
                     <button 
-                      className="action-btn"
-                      onClick={() => handleWidgetAction(widget.id)}
+                      className="action-btn delete-btn"
+                      onClick={() => handleDeleteClick(widget)}
+                      title="위젯 삭제"
                     >
-                      ...
+                      🗑️
                     </button>
                   </td>
                 </tr>
@@ -215,6 +247,33 @@ const WidgetDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* 삭제 확인 모달 */}
+      {showDeleteConfirm && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>위젯 삭제 확인</h3>
+            <p>
+              정말로 "{widgetToDelete?.name || widgetToDelete?.id}" 위젯을 삭제하시겠습니까?
+            </p>
+            <p className="warning-text">이 작업은 되돌릴 수 없습니다.</p>
+            <div className="modal-buttons">
+              <button 
+                className="cancel-btn" 
+                onClick={handleCancelDelete}
+              >
+                취소
+              </button>
+              <button 
+                className="confirm-delete-btn" 
+                onClick={handleDeleteWidget}
+              >
+                삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
