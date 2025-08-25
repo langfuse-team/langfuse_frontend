@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { RightAlignedCell } from './RightAlignedCell';
-import { LeftAlignedCell } from './LeftAlignedCell';
-import { DashboardCard } from './cards/DashboardCard';
-import { DashboardTable } from './cards/DashboardTable';
-import { compactNumberFormatter } from '../../../utils/numbers';
-import { TotalMetric } from './TotalMetric';
-import { totalCostDashboardFormatted } from '../lib/dashboard-utils';
-import { truncate } from '../../../utils/string';
+import RightAlignedCell from './RightAlignedCell';
+import LeftAlignedCell from './LeftAlignedCell';
+import DashboardCard from './cards/DashboardCard';
+import DashboardTable from './cards/DashboardTable';
+import { compactNumberFormatter } from '../utils/numbers';
+import TotalMetric from './TotalMetric';
+import { totalCostDashboardFormatted } from './libs/dashboard-utils';
+import { truncate } from '../utils/string';
 
 // DocPopup 미니 컴포넌트 (ModelCostTable 전용)
 const DocPopup = ({ description, href }) => {
@@ -116,7 +116,7 @@ const DocPopup = ({ description, href }) => {
  * @param {Date} props.toTimestamp - 종료 시간
  * @param {boolean} props.isLoading - 로딩 상태
  */
-export const ModelCostTable = ({
+const ModelCostTable = ({
   className,
   projectId,
   globalFilterState,
@@ -225,3 +225,5 @@ export const ModelCostTable = ({
     </DashboardCard>
   );
 };
+
+export default ModelCostTable;

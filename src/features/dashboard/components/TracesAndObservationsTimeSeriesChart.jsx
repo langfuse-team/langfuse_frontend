@@ -1,11 +1,11 @@
 import React from 'react';
-import { DashboardCard } from './cards/DashboardCard';
-import { BaseTimeSeriesChart } from './BaseTimeSeriesChart';
-import { TotalMetric } from './TotalMetric';
-import { compactNumberFormatter } from '../../../utils/numbers';
+import DashboardCard from './cards/DashboardCard';
+import BaseTimeSeriesChart from './BaseTimeSeriesChart';
+import TotalMetric from './TotalMetric';
+import { compactNumberFormatter } from '../utils/numbers';
 import { isEmptyTimeSeries } from './hooks';
-import { NoDataOrLoading } from '../../../components/NoDataOrLoading';
-import { TabComponent } from './TabsComponent';
+import NoDataOrLoading from './NoDataOrLoading';
+import TabComponent from './TabsComponent';
 
 /**
  * 트레이스와 관찰 시계열 차트 컴포넌트

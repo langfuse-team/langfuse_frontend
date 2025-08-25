@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { DashboardCard } from './cards/DashboardCard';
-import { TotalMetric } from './TotalMetric';
-import { compactNumberFormatter } from '../../../utils/numbers';
-import { NoDataOrLoading } from '../../../components/NoDataOrLoading';
+import DashboardCard from './cards/DashboardCard';
+import TotalMetric from './TotalMetric';
+import { compactNumberFormatter } from '../utils/numbers';
+import NoDataOrLoading from './NoDataOrLoading';
 
 // ExpandListButton 간단 구현 (임시)
 const ExpandListButton = ({ 
@@ -146,7 +146,7 @@ const BarList = ({ data, valueFormatter, showAnimation = true, color = "indigo" 
  * @param {Date} props.toTimestamp - 종료 시간
  * @param {boolean} props.isLoading - 로딩 상태
  */
-export const TracesBarListChart = ({
+const TracesBarListChart = ({
   className,
   projectId,
   globalFilterState,
@@ -259,3 +259,5 @@ export const TracesBarListChart = ({
     </DashboardCard>
   );
 };
+
+export default TracesBarListChart;

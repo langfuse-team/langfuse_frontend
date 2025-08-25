@@ -1,11 +1,11 @@
 import React from 'react';
 
-function TotalMetric({
+const  TotalMetric = ({
   className = '',
   metric,
   description,
   children
-}) {
+}) => {
   return (
     <div 
       style={{

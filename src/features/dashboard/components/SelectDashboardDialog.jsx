@@ -10,13 +10,13 @@ import React, { useState } from "react";
  * @param {function} props.onSelectDashboard - 대시보드 선택 콜백
  * @param {function} props.onSkip - 건너뛰기 콜백
  */
-export function SelectDashboardDialog({
+const SelectDashboardDialog = ({
   open,
   onOpenChange,
   projectId,
   onSelectDashboard,
   onSkip,
-}) {
+}) => {
   const [selectedDashboardId, setSelectedDashboardId] = useState(null);
 
   // TODO: 실제 API 연동 필요
@@ -317,3 +317,5 @@ export function SelectDashboardDialog({
     </>
   );
 }
+
+export default SelectDashboardDialog; 

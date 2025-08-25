@@ -1,7 +1,7 @@
 import React from 'react';
-import { RightAlignedCell } from './RightAlignedCell';
-import { DashboardCard } from './cards/DashboardCard';
-import { DashboardTable } from './cards/DashboardTable';
+import RightAlignedCell from './RightAlignedCell';
+import DashboardCard from './cards/DashboardCard';
+import DashboardTable from './cards/DashboardTable';
 
 /* eslint-disable react-refresh/only-export-components */
 
@@ -72,7 +72,7 @@ function getGenerationLikeTypes() {
  * @param {Date} props.toTimestamp - 종료 날짜
  * @param {boolean} props.isLoading - 로딩 상태
  */
-export const LatencyTables = ({
+const LatencyTables = ({
   projectId,
   globalFilterState,
   fromTimestamp,

@@ -1,6 +1,8 @@
+//src/features/dashboard/pages/DashboardListPage.jsx
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import dashboardAPI, { utils } from '../services/dashboardAPI';
+import { dashboardAPI, utils } from '../services';
 
 // 편집 다이얼로그 컴포넌트 (간단 버전)
 function EditDashboardDialog({ 
@@ -435,22 +437,7 @@ function DashboardTable() {
           </div>
         </div>
         
-        <div>
-          <button
-            onClick={loadDashboards}
-            style={{
-              marginRight: '10px',
-              padding: '8px 16px',
-              backgroundColor: '#28a745',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            🔄 새로고침
-          </button>
-          
+        <div>                 
           <button
             onClick={handleCreateNew}
             style={{
@@ -543,7 +530,7 @@ function DashboardTable() {
                   userSelect: 'none'
                 }}
               >
-                Updated At {sortConfig.key === 'updatedAt' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                Updated At {sortConfig.key === 'updatedAt' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
               </th>
               <th style={{ 
                 textAlign: 'left', 

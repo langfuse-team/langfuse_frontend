@@ -1,18 +1,18 @@
 import React from 'react';
 import {
-  extractTimeSeriesData,
-  fillMissingValuesAndTransform,
-  isEmptyTimeSeries,
+ extractTimeSeriesData,
+ fillMissingValuesAndTransform,
+ isEmptyTimeSeries,
 } from './hooks';
-import { DashboardCard } from './cards/DashboardCard';
-import { BaseTimeSeriesChart } from './BaseTimeSeriesChart';
-import { TabComponent } from './TabsComponent';
-import { latencyFormatter } from '../../../utils/numbers';
-import { dashboardDateRangeAggregationSettings } from '../../../utils/date-range-utils';
-import { NoDataOrLoading } from './NoDataOrLoading';
+import DashboardCard from './cards/DashboardCard';
+import BaseTimeSeriesChart from './BaseTimeSeriesChart';
+import TabComponent from './TabsComponent';
+import { latencyFormatter } from '../utils/numbers';
+import { dashboardDateRangeAggregationSettings } from '../utils/date-range-utils';
+//import NoDataOrLoading from './NoDataOrLoading';
 import {
-  ModelSelectorPopover,
-  useModelSelection,
+ ModelSelectorPopover,
+ useModelSelection,
 } from './ModelSelector';
 
 /* eslint-disable react-refresh/only-export-components */
@@ -43,7 +43,7 @@ function getGenerationLikeTypes() {
  * @param {Date} props.toTimestamp - 종료 날짜
  * @param {boolean} props.isLoading - 로딩 상태
  */
-export const GenerationLatencyChart = ({
+const GenerationLatencyChart = ({
   className,
   projectId,
   globalFilterState,

@@ -1,4 +1,4 @@
-import { usdFormatter } from '../../../utils/numbers';
+import { usdFormatter } from '../../utils/numbers';
 
 /**
  * 트레이스에는 startTime이나 endTime 컬럼이 없으므로 timestamp 컬럼으로 매핑

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { BaseTimeSeriesChart } from './BaseTimeSeriesChart';
-import { TotalMetric } from './TotalMetric';
+import BaseTimeSeriesChart from './BaseTimeSeriesChart';
+import TotalMetric from './TotalMetric';
 
 /**
  * 탭 기반 시계열 차트 컴포넌트
@@ -16,7 +16,7 @@ import { TotalMetric } from './TotalMetric';
  * @param {function} props.data[].formatter - 값 포맷터 함수
  * @param {Array} props.data[].data - 시계열 데이터 배열
  */
-export const BaseTabTimeseriesChart = (props) => {
+const BaseTabTimeseriesChart = (props) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   const handleTabClick = (index) => {
@@ -119,3 +119,5 @@ export const BaseTabTimeseriesChart = (props) => {
     </div>
   );
 };
+
+export default BaseTabTimeseriesChart;

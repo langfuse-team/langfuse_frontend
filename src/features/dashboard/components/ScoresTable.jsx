@@ -1,12 +1,12 @@
 import React from 'react';
-import { DashboardCard } from './cards/DashboardCard';
-import { DashboardTable } from './cards/DashboardTable';
-import { compactNumberFormatter } from '../../../utils/numbers';
-import { RightAlignedCell } from './RightAlignedCell';
-import { LeftAlignedCell } from './LeftAlignedCell';
-import { TotalMetric } from './TotalMetric';
-import { createTracesTimeFilter } from '../lib/dashboard-utils';
-import { NoDataOrLoading } from '../../../components/NoDataOrLoading';
+import DashboardCard from './cards/DashboardCard';
+import DashboardTable from './cards/DashboardTable';
+import { compactNumberFormatter } from '../utils/numbers';
+import RightAlignedCell from './RightAlignedCell';
+import LeftAlignedCell from './LeftAlignedCell';
+import TotalMetric from './TotalMetric';
+import { createTracesTimeFilter } from './libs/dashboard-utils';
+import NoDataOrLoading from './NoDataOrLoading';
 
 // Mock 스코어 관련 함수들 (간단 구현)
 /**
@@ -68,7 +68,7 @@ const scoreNameSourceDataTypeMatch = (scoreName, scoreSource, scoreDataType) => 
  * @param {Object} props.globalFilterState - 글로벌 필터 상태
  * @param {boolean} props.isLoading - 로딩 상태
  */
-export const ScoresTable = ({
+const ScoresTable = ({
   className,
   projectId,
   globalFilterState,
@@ -252,3 +252,5 @@ export const ScoresTable = ({
     </DashboardCard>
   );
 };
+
+export default ScoresTable; 

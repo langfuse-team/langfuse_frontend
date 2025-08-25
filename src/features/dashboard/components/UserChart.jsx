@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { DashboardCard } from './cards/DashboardCard';
-import { compactNumberFormatter } from '../../../utils/numbers';
-import { TabComponent } from './TabsComponent';
-import { TotalMetric } from './TotalMetric';
-import { totalCostDashboardFormatted } from '../lib/dashboard-utils';
-import { NoDataOrLoading } from '../../../components/NoDataOrLoading';
+import DashboardCard from './cards/DashboardCard';
+import { compactNumberFormatter } from '../utils/numbers';
+import TabComponent from './TabsComponent';
+import TotalMetric from './TotalMetric';
+import { totalCostDashboardFormatted } from './libs/dashboard-utils';
+import NoDataOrLoading from './NoDataOrLoading';
 
 // ExpandListButton 컴포넌트 (재사용)
 const ExpandListButton = ({ 
@@ -148,7 +148,7 @@ const BarList = ({ data, valueFormatter, showAnimation = true, color = "indigo" 
  * @param {Date} props.toTimestamp - 종료 시간
  * @param {boolean} props.isLoading - 로딩 상태
  */
-export const UserChart = ({
+const UserChart = ({
   className,
   projectId,
   globalFilterState,
@@ -293,3 +293,5 @@ export const UserChart = ({
     </DashboardCard>
   );
 };
+
+export default UserChart; 

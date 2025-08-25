@@ -1,20 +1,20 @@
 import React from 'react';
-import { BaseTimeSeriesChart } from './BaseTimeSeriesChart';
-import { DashboardCard } from './cards/DashboardCard';
+import BaseTimeSeriesChart from './BaseTimeSeriesChart';
+import DashboardCard from './cards/DashboardCard';
 import { 
-  extractTimeSeriesData,
-  fillMissingValuesAndTransform,
-  isEmptyTimeSeries 
+ extractTimeSeriesData,
+ fillMissingValuesAndTransform,
+ isEmptyTimeSeries 
 } from './hooks';
-import { dashboardDateRangeAggregationSettings } from '../../../utils/date-range-utils';
-import { NoDataOrLoading } from './NoDataOrLoading';
+import { dashboardDateRangeAggregationSettings } from '../utils/date-range-utils';
+import NoDataOrLoading from './NoDataOrLoading';
 
 /**
  * 스코어 데이터 타입에 따른 아이콘 반환 (간단 구현)
  * @param {string} dataType - 데이터 타입
  * @returns {string} 아이콘 문자열
  */
-function getScoreDataTypeIcon(dataType) {
+const getScoreDataTypeIcon = (dataType) => {
   const iconMap = {
     'NUMERIC': '📊',
     'CATEGORICAL': '📋', 
@@ -45,7 +45,7 @@ function mapLegacyUiTableFilterToView(view, filterState) {
  * @param {string} props.projectId - 프로젝트 ID
  * @param {boolean} props.isLoading - 로딩 상태
  */
-export function ChartScores(props) {
+const ChartScores = (props) => {
   const {
     className,
     agg,

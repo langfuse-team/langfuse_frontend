@@ -1,10 +1,10 @@
 import React from 'react';
 
-function LeftAlignedCell({
+const  LeftAlignedCell = ({
   children,
   className = '',
   title
-}) {
+}) => {
   return (
     <div 
       style={{

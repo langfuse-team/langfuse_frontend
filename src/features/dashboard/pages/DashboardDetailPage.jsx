@@ -1,475 +1,466 @@
-import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import React from "react";
+import { useParams, Link } from "react-router-dom";
 
-// Mock 데이터들
-const mockDashboard = {
-  id: '1',
-  name: 'My Custom Dashboard',
-  description: 'Showcase how to create your own dashboard.',
-  owner: 'PROJECT'
+// 새로운 Hook과 유틸 사용
+import { useDashboardDetail } from "../hooks/useDashboardDetail";
+import { validateComponentData } from "../utils/widget-data-transform";
+import { getComponentData, getStatusIndicator, isDashboardEditable, formatDate } from "../utils/dashboard-helpers";
+
+// 기존 컴포넌트들 import
+import DashboardCard from "../components/cards/DashboardCard";
+
+// 기존 차트 컴포넌트들 import
+import TotalMetric from "../components/TotalMetric";
+import BaseTimeSeriesChart from "../components/BaseTimeSeriesChart"; // 활성화!
+import LatencyChart from "../components/LatencyChart";
+import TracesBarListChart from "../components/TracesBarListChart";
+import ModelUsageChart from "../components/ModelUsageChart";
+import UserChart from "../components/UserChart";
+import ModelCostTable from "../components/ModelCostTable";
+
+// 안전한 BaseTimeSeriesChart 래퍼 컴포넌트
+function SafeBaseTimeSeriesChart({ data, title, isLoading, dateRange, config }) {
+  console.log('SafeBaseTimeSeriesChart 받은 props:', { 
+    data, 
+    title, 
+    isLoading, 
+    dataType: Array.isArray(data) ? 'array' : typeof data,
+    dataLength: Array.isArray(data) ? data.length : 'N/A'
+  });
+
+  // 로딩 상태
+  if (isLoading) {
+    return (
+      <div style={{
+        height: "150px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "#666"
+      }}>
+        ⏳ Loading chart data...
+      </div>
+    );
+  }
+
+  // 데이터 검증
+  if (!Array.isArray(data) || data.length === 0) {
+    return (
+      <div style={{
+        height: "150px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexDirection: "column",
+        color: "#999"
+      }}>
+        <div style={{ fontSize: "2rem", marginBottom: "8px" }}>📈</div>
+        <div>No time series data</div>
+        <div style={{ fontSize: "12px", marginTop: "4px" }}>
+          Received: {typeof data} {Array.isArray(data) ? `(${data.length} items)` : ''}
+        </div>
+      </div>
+    );
+  }
+
+  // 데이터 구조 검증
+  const hasValidStructure = data.every(point => 
+    point && 
+    typeof point.ts !== 'undefined' && 
+    Array.isArray(point.values)
+  );
+
+  if (!hasValidStructure) {
+    return (
+      <div style={{
+        height: "150px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexDirection: "column",
+        color: "#ff6b35"
+      }}>
+        <div style={{ fontSize: "1.5rem", marginBottom: "8px" }}>⚠️</div>
+        <div>Invalid data structure</div>
+        <div style={{ fontSize: "12px", marginTop: "4px", textAlign: "center" }}>
+          Expected: {`[{ts, values: [{label, value}]}]`}
+          <br />
+          Got: {JSON.stringify(data[0], null, 2).substring(0, 100)}...
+        </div>
+      </div>
+    );
+  }
+
+  // 정상적인 BaseTimeSeriesChart 렌더링
+  try {
+    return (
+      <BaseTimeSeriesChart
+        data={data}
+        agg={config?.dateRangeAgg || 'day'}
+        showLegend={true}
+        connectNulls={false}
+        chartType="line"
+      />
+    );
+  } catch (error) {
+    console.error('BaseTimeSeriesChart 렌더링 에러:', error);
+    return (
+      <div style={{
+        height: "150px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexDirection: "column",
+        color: "red"
+      }}>
+        <div style={{ fontSize: "1.5rem", marginBottom: "8px" }}>❌</div>
+        <div>Chart rendering failed</div>
+        <div style={{ fontSize: "12px", marginTop: "4px" }}>
+          {error.message}
+        </div>
+      </div>
+    );
+  }
+}
+
+// 컴포넌트 매핑 (템플릿에서 사용)
+const COMPONENT_MAP = {
+  TotalMetric,
+  BaseTimeSeriesChart: SafeBaseTimeSeriesChart, // 안전한 래퍼 사용
+  LatencyChart,
+  TracesBarListChart,
+  ModelUsageChart,
+  UserChart,
+  ModelCostTable,
 };
 
-const mockWidgets = [
-  {
-    id: 'widget-1',
-    name: 'Count (Traces)',
-    description: 'Shows the count of Traces',
-    chartType: 'BIG_NUMBER',
-    data: { value: 349, label: 'Total Traces' }
-  },
-  {
-    id: 'widget-2', 
-    name: 'Count (Observations)',
-    description: 'Shows the count of Observations',
-    chartType: 'BIG_NUMBER',
-    data: { value: '2.05K', label: 'Total Observations' }
-  },
-  {
-    id: 'widget-3',
-    name: 'Sum Output Tokens Per Second by Prompt',
-    description: 'Shows the sum output tokens/s by prompt',
-    chartType: 'LINE_TIME_SERIES',
-    data: [
-      { date: '8/15/25', value1: 1500, value2: 500, value3: 0 },
-      { date: '8/18/25', value1: 1800, value2: 600, value3: 0 },
-      { date: '8/21/25', value1: 1200, value2: 400, value3: 0 }
-    ]
-  },
-  {
-    id: 'widget-4',
-    name: 'P 75 Value by Name (Scores Numeric)',
-    description: 'Shows the p 75 value of Scores Numeric filtered by Name', 
-    chartType: 'LINE_CHART',
-    data: [
-      { category: '8/15/25', blue: 0.5, yellow: 0.4, red: 0.2 },
-      { category: '8/17/25', blue: 0.55, yellow: 0.35, red: 0.22 },
-      { category: '8/19/25', blue: 0.45, yellow: 0.45, red: 0.25 },
-      { category: '8/21/25', blue: 0.6, yellow: 0.7, red: 0.23 }
-    ]
-  },
-  {
-    id: 'widget-5',
-    name: 'Sum Total Cost by User Id (Traces)',
-    description: 'Shows the sum totalcost of Traces by user id',
-    chartType: 'BAR_CHART',
-    data: [
-      { user: 'u-rzLMsF1', cost: 0.012 },
-      { user: 'u-QZqk7MB', cost: 0.008 },
-      { user: 'u-Cmt2MsK', cost: 0.006 }
-    ]
-  },
-  {
-    id: 'widget-6',
-    name: 'P 90 Latency by User Id (Traces)',
-    description: 'Shows the p 90 latency of Traces by user id',
-    chartType: 'HORIZONTAL_BAR',
-    data: [
-      { user: 'u-rzLMsF1', latency: 850 },
-      { user: 'u-QZqk7MB', latency: 720 },
-      { user: 'u-Cmt2MsK', latency: 650 },
-      { user: 'u-XvP2R8N', latency: 580 }
-    ]
+// DashboardWidget 컴포넌트
+function DashboardWidget({ widget, widgetData, dateRange }) {
+  const Component = COMPONENT_MAP[widget.component];
+  const data = widgetData[widget.id] || { isLoading: true };
+
+  if (!Component) {
+    return (
+      <DashboardCard
+        title={widget.title}
+        description={widget.description}
+        isLoading={false}
+      >
+        <div
+          style={{
+            height: "150px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#666",
+            border: "1px dashed #ccc",
+            borderRadius: "4px",
+          }}
+        >
+          <div className="text-center">
+            <div>⚠️ Component not found</div>
+            <div style={{ fontSize: "12px", marginTop: "4px" }}>
+              {widget.component}
+            </div>
+          </div>
+        </div>
+      </DashboardCard>
+    );
   }
-];
 
-// Mock 위젯 배치 정보 (react-grid-layout 형식) - 나중에 구현 예정
-// const mockWidgetPlacements = [
-//   { id: 'widget-1', x: 0, y: 0, w: 3, h: 3 },
-//   { id: 'widget-2', x: 3, y: 0, w: 3, h: 3 },
-//   { id: 'widget-3', x: 6, y: 0, w: 6, h: 4 },
-//   { id: 'widget-4', x: 0, y: 3, w: 6, h: 4 },
-//   { id: 'widget-5', x: 6, y: 4, w: 3, h: 4 },
-//   { id: 'widget-6', x: 9, y: 4, w: 3, h: 4 }
-// ];
+  const componentData = getComponentData(widget, data);
+  const isDataValid = validateComponentData(widget.component, data);
 
-// 간단한 차트 컴포넌트들 (플레이스홀더)
-function BigNumberChart({ data }) {
-  return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      height: '100%'
-    }}>
-      <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#333' }}>
-        {data.value}
-      </div>
-      <div style={{ fontSize: '0.9rem', color: '#666', marginTop: '8px' }}>
-        {data.label}
-      </div>
-    </div>
-  );
-}
-
-function LineChart({ data }) {
-  return (
-    <div style={{
-      height: '100%',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      border: '1px dashed #ccc',
-      borderRadius: '4px',
-      background: '#f9f9f9'
-    }}>
-      <div style={{ textAlign: 'center', color: '#666' }}>
-        <div>📈 Line Chart</div>
-        <div style={{ fontSize: '0.8rem', marginTop: '4px' }}>
-          {data.length} data points
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function BarChart({ data }) {
-  return (
-    <div style={{
-      height: '100%',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      border: '1px dashed #ccc',
-      borderRadius: '4px',
-      background: '#f9f9f9'
-    }}>
-      <div style={{ textAlign: 'center', color: '#666' }}>
-        <div>📊 Bar Chart</div>
-        <div style={{ fontSize: '0.8rem', marginTop: '4px' }}>
-          {data.length} items
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// 위젯 컴포넌트
-function MockWidget({ widget, onEdit, onDelete, canEdit }) {
-  const renderChart = () => {
-    switch (widget.chartType) {
-      case 'BIG_NUMBER':
-        return <BigNumberChart data={widget.data} />;
-      case 'LINE_TIME_SERIES':
-      case 'LINE_CHART':
-        return <LineChart data={widget.data} />;
-      case 'BAR_CHART':
-      case 'HORIZONTAL_BAR':
-        return <BarChart data={widget.data} />;
-      default:
-        return (
-          <div style={{
-            height: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#666'
-          }}>
-            📊 {widget.chartType}
-          </div>
-        );
-    }
-  };
+  // 디버깅용 로깅 - BaseTimeSeriesChart만
+  if (import.meta.env.DEV && widget.component === 'BaseTimeSeriesChart') {
+    console.log(`${widget.component} UI 디버깅 (${widget.id}):`, {
+      data,
+      componentData,
+      isDataValid,
+      widgetComponent: widget.component,
+      dataStructure: Array.isArray(componentData) ? 
+        `Array[${componentData.length}]: ${JSON.stringify(componentData[0], null, 2).substring(0, 200)}...` :
+        typeof componentData
+    });
+  }
 
   return (
-    <div style={{
-      height: '100%',
-      border: '1px solid #e0e0e0',
-      borderRadius: '8px',
-      backgroundColor: 'white',
-      padding: '16px',
-      display: 'flex',
-      flexDirection: 'column'
-    }}>
-      {/* 헤더 */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: '8px'
-      }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h3 style={{
-            margin: 0,
-            fontSize: '1rem',
-            fontWeight: '600',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis'
-          }}>
-            {widget.name}
-          </h3>
-          <p style={{
-            margin: '4px 0 0 0',
-            fontSize: '0.875rem',
-            color: '#666',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis'
-          }}>
-            {widget.description}
-          </p>
-        </div>
-
-        {/* 액션 버튼들 */}
-        {canEdit && (
-          <div style={{ display: 'flex', gap: '4px', marginLeft: '8px' }}>
-            <button
-              onClick={() => onEdit(widget)}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '4px',
-                color: '#666'
-              }}
-              title="Edit widget"
-            >
-              ✏️
-            </button>
-            <button
-              onClick={() => onDelete(widget)}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '4px',
-                color: '#999'
-              }}
-              title="Delete widget"
-            >
-              🗑️
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* 차트 영역 */}
-      <div style={{ flex: 1, minHeight: 0 }}>
-        {renderChart()}
-      </div>
-    </div>
-  );
-}
-
-// 위젯 선택 다이얼로그
-function SelectWidgetDialog({ open, onClose, onSelectWidget }) {
-  const [selectedWidget, setSelectedWidget] = useState(null);
-
-  const availableWidgets = [
-    { id: 'new-1', name: 'User Activity', description: 'Track user interactions', chartType: 'LINE_CHART' },
-    { id: 'new-2', name: 'Error Rate', description: 'Monitor system errors', chartType: 'BAR_CHART' },
-    { id: 'new-3', name: 'Response Time', description: 'Average response time', chartType: 'BIG_NUMBER' }
-  ];
-
-  if (!open) return null;
-
-  const handleAddWidget = () => {
-    if (selectedWidget) {
-      onSelectWidget(selectedWidget);
-      onClose();
-    }
-  };
-
-  return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0,0,0,0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000
-    }}>
-      <div style={{
-        backgroundColor: 'white',
-        padding: '24px',
-        borderRadius: '8px',
-        width: '600px',
-        maxWidth: '90vw',
-        maxHeight: '80vh',
-        overflow: 'auto'
-      }}>
-        <h2 style={{ marginBottom: '20px' }}>Select widget to add</h2>
-        
-        {availableWidgets.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
-            No widgets found. Create a new widget to get started.
-          </div>
-        ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #eee' }}>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Name</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Description</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Chart Type</th>
-              </tr>
-            </thead>
-            <tbody>
-              {availableWidgets.map(widget => (
-                <tr 
-                  key={widget.id}
-                  onClick={() => setSelectedWidget(widget)}
-                  style={{
-                    cursor: 'pointer',
-                    backgroundColor: selectedWidget?.id === widget.id ? '#f0f0f0' : 'transparent',
-                    borderBottom: '1px solid #eee'
-                  }}
-                >
-                  <td style={{ padding: '12px 8px', fontWeight: '500' }}>{widget.name}</td>
-                  <td style={{ padding: '12px 8px' }}>{widget.description}</td>
-                  <td style={{ padding: '12px 8px' }}>{widget.chartType}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between',
-          marginTop: '24px'
-        }}>
-          <button
-            onClick={() => alert('Navigate to Create New Widget')}
-            style={{
-              padding: '8px 16px',
-              border: '1px solid #ccc',
-              backgroundColor: 'white',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
+    <DashboardCard
+      title={widget.title}
+      description={widget.description}
+      isLoading={data.isLoading}
+      headerRight={getStatusIndicator(widget, data)}
+    >
+      {data.error ? (
+        <div
+          style={{
+            height: "150px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "red",
+            flexDirection: "column",
+          }}
+        >
+          <div>❌ Error</div>
+          <div
+            style={{ fontSize: "12px", marginTop: "4px", textAlign: "center" }}
           >
-            ➕ Create New Widget
-          </button>
-          
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              onClick={onClose}
-              style={{
-                padding: '8px 16px',
-                border: '1px solid #ccc',
-                backgroundColor: 'white',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleAddWidget}
-              disabled={!selectedWidget}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: selectedWidget ? '#007bff' : '#ccc',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: selectedWidget ? 'pointer' : 'not-allowed'
-              }}
-            >
-              Add Selected Widget
-            </button>
+            {data.error}
           </div>
         </div>
-      </div>
-    </div>
+      ) : data.isEmpty ? (
+        <div
+          style={{
+            height: "150px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#999",
+            flexDirection: "column",
+          }}
+        >
+          <div style={{ fontSize: "2rem", marginBottom: "8px" }}>📊</div>
+          <div>No data available</div>
+          <div style={{ fontSize: "12px", marginTop: "4px" }}>
+            API integration pending
+          </div>
+        </div>
+      ) : !isDataValid ? (
+        <div
+          style={{
+            height: "150px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#ff6b35",
+            flexDirection: "column",
+          }}
+        >
+          <div style={{ fontSize: "1.5rem", marginBottom: "8px" }}>⚠️</div>
+          <div>Invalid data format</div>
+          <div style={{ fontSize: "12px", marginTop: "4px", textAlign: "center" }}>
+            Component: {widget.component}
+            <br />
+            Expected format mismatch
+          </div>
+        </div>
+      ) : data.isLoading ? (
+        <div
+          style={{
+            height: "150px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#666",
+          }}
+        >
+          <div>⏳ Loading...</div>
+        </div>
+      ) : componentData === null ? (
+        <div
+          style={{
+            height: "150px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#999",
+            flexDirection: "column",
+          }}
+        >
+          <div style={{ fontSize: "2rem", marginBottom: "8px" }}>📊</div>
+          <div>No data to display</div>
+        </div>
+      ) : (
+        <>
+          <Component
+            {...(widget.component === 'TotalMetric' ? {
+              metric: componentData
+              // description 제거 - DashboardCard에서 이미 표시중
+            } : {
+              data: componentData
+            })}
+            isLoading={data.isLoading}
+            dateRange={dateRange}
+            title={widget.title}
+            config={data.config}
+          />
+        </>
+      )}
+    </DashboardCard>
   );
 }
 
-// 메인 Dashboard 상세 페이지
+// 메인 DashboardDetailPage 컴포넌트
 function DashboardDetailPage() {
   const { dashboardId } = useParams();
-  const [widgets, setWidgets] = useState(mockWidgets);
-  const [isWidgetDialogOpen, setIsWidgetDialogOpen] = useState(false);
-  const [dateRange, setDateRange] = useState('Past 7 days');
+  
+  // 새로운 Hook 사용 - 모든 로직이 여기에 집중됨
+  const {
+    dashboard,
+    widgetData,
+    loading,
+    error,
+    dateRange,
+    templateInfo,
+    loadingStats,
+    setDateRange,
+    reload,
+    clone
+  } = useDashboardDetail(dashboardId);
 
-  const canEdit = true; // Mock 권한
+  // 로딩 상태
+  if (loading) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "400px",
+        }}
+      >
+        <div style={{ marginBottom: "16px" }}>⏳ Loading dashboard...</div>
+        <div style={{ fontSize: "14px", color: "#666" }}>
+          Dashboard ID: {dashboardId}
+        </div>
+      </div>
+    );
+  }
 
-  const handleAddWidget = () => {
-    setIsWidgetDialogOpen(true);
-  };
+  // 에러 상태
+  if (error) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "400px",
+        }}
+      >
+        <div style={{ color: "red", marginBottom: "16px" }}>❌ {error}</div>
+        <div style={{ marginBottom: "16px" }}>
+          <Link
+            to="/dashboards"
+            style={{ color: "#007bff", textDecoration: "none" }}
+          >
+            ← Back to Dashboards
+          </Link>
+        </div>
+        <button
+          onClick={reload}
+          style={{
+            padding: "8px 16px",
+            backgroundColor: "#007bff",
+            color: "white",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+          }}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
-  const handleSelectWidget = (newWidget) => {
-    const widget = {
-      id: `widget-${Date.now()}`,
-      name: newWidget.name,
-      description: newWidget.description,
-      chartType: newWidget.chartType,
-      data: { value: 'New Data', label: 'Sample' },
-      dashboardId: dashboardId // dashboardId 활용
-    };
-    setWidgets(prev => [...prev, widget]);
-    alert(`Widget added to dashboard ${dashboardId}!`);
-  };
+  if (!dashboard) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "400px",
+        }}
+      >
+        <div style={{ marginBottom: "16px" }}>📋 Dashboard not found</div>
+        <Link
+          to="/dashboards"
+          style={{ color: "#007bff", textDecoration: "none" }}
+        >
+          ← Back to Dashboards
+        </Link>
+      </div>
+    );
+  }
 
-  const handleEditWidget = (widget) => {
-    alert(`Edit widget: ${widget.name} (Dashboard: ${dashboardId})`);
-  };
-
-  const handleDeleteWidget = (widget) => {
-    if (confirm(`Delete widget "${widget.name}" from dashboard ${dashboardId}?`)) {
-      setWidgets(prev => prev.filter(w => w.id !== widget.id));
-      alert('Widget deleted successfully!');
-    }
-  };
-
-  const handleCloneDashboard = () => {
-    alert(`Dashboard ${dashboardId} cloned successfully!`);
-  };
+  const { template } = templateInfo;
+  const canEdit = isDashboardEditable(dashboard);
 
   return (
-    <div style={{ padding: '20px' }}>
+    <div style={{ padding: "20px" }}>
       {/* 헤더 */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '20px'
-      }}>
-        <div>
-          <h1 style={{ margin: 0 }}>
-            {mockDashboard.name} (ID: {dashboardId})
-            {mockDashboard.owner === 'LANGFUSE' ? ' (Langfuse Maintained)' : ''}
-          </h1>
-          <p style={{ margin: '4px 0 0 0', color: '#666' }}>
-            {mockDashboard.description}
-          </p>
-        </div>
-        
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {canEdit && (
-            <button
-              onClick={handleAddWidget}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          marginBottom: "20px",
+        }}
+      >
+        <div style={{ flex: 1 }}>
+          <div style={{ marginBottom: "8px" }}>
+            <Link
+              to="/dashboards"
               style={{
-                padding: '8px 16px',
-                backgroundColor: '#007bff',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px'
+                color: "#666",
+                textDecoration: "none",
+                fontSize: "14px",
               }}
             >
-              ➕ Add Widget
-            </button>
+              ← Dashboards
+            </Link>
+          </div>
+          <h1 style={{ margin: 0 }}>
+            {template?.name || dashboard.name}
+            {dashboard.owner === "LANGFUSE" && (
+              <span
+                style={{
+                  fontSize: "0.8rem",
+                  color: "#666",
+                  marginLeft: "12px",
+                  fontWeight: "normal",
+                }}
+              >
+                (Langfuse Maintained)
+              </span>
+            )}
+          </h1>
+          {(template?.description || dashboard.description) && (
+            <p style={{ margin: "4px 0 0 0", color: "#666" }}>
+              {template?.description || dashboard.description}
+            </p>
           )}
-          <button
-            onClick={handleCloneDashboard}
+          <div
             style={{
-              padding: '8px 16px',
-              border: '1px solid #ccc',
-              backgroundColor: 'white',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
+              fontSize: "12px",
+              color: "#999",
+              marginTop: "8px",
+            }}
+          >
+            {template && `📊 ${template.widgets.length} widgets`} | Created:{" "}
+            {formatDate(dashboard.createdAt)} | Updated:{" "}
+            {formatDate(dashboard.updatedAt)}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button
+            onClick={clone}
+            style={{
+              padding: "8px 16px",
+              border: "1px solid #ccc",
+              backgroundColor: "white",
+              borderRadius: "4px",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
             }}
           >
             📋 Clone
@@ -478,99 +469,175 @@ function DashboardDetailPage() {
       </div>
 
       {/* 필터 */}
-      <div style={{
-        display: 'flex',
-        gap: '12px',
-        marginBottom: '20px',
-        padding: '12px',
-        backgroundColor: '#f8f9fa',
-        borderRadius: '4px'
-      }}>
+      <div
+        style={{
+          display: "flex",
+          gap: "12px",
+          marginBottom: "20px",
+        }}
+      >
         <select
           value={dateRange}
           onChange={(e) => setDateRange(e.target.value)}
           style={{
-            padding: '6px 12px',
-            border: '1px solid #ccc',
-            borderRadius: '4px'
+            padding: "8px 12px",
+            border: "1px solid #ccc",
+            borderRadius: "4px",
+            backgroundColor: "white",
+            minWidth: "120px",
           }}
         >
           <option>Past 7 days</option>
           <option>Past 30 days</option>
           <option>Past 90 days</option>
+          <option>Past year</option>
         </select>
-        
-        <button
+
+        <div
           style={{
-            padding: '6px 12px',
-            border: '1px solid #ccc',
-            backgroundColor: 'white',
-            borderRadius: '4px',
-            cursor: 'pointer'
+            display: "flex",
+            alignItems: "center",
+            padding: "8px 12px",
+            border: "1px solid #ccc",
+            borderRadius: "4px",
+            backgroundColor: "#f8f9fa",
+            fontSize: "14px",
+            color: "#666",
           }}
         >
-          🔍 Filters
+          📅 {dateRange}
+        </div>
+
+        <button
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+            padding: "8px 12px",
+            border: "1px solid #ccc",
+            backgroundColor: "white",
+            borderRadius: "4px",
+            cursor: "pointer",
+          }}
+        >
+          Filters ▼
         </button>
       </div>
 
       {/* 위젯 그리드 */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-        gap: '16px',
-        minHeight: '400px'
-      }}>
-        {widgets.length === 0 ? (
-          <div style={{
-            gridColumn: '1 / -1',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '60px',
-            border: '2px dashed #ccc',
-            borderRadius: '8px',
-            color: '#666'
-          }}>
-            <div style={{ fontSize: '2rem', marginBottom: '16px' }}>📊</div>
-            <h3 style={{ margin: '0 0 8px 0' }}>No widgets yet</h3>
-            <p style={{ margin: '0 0 16px 0', textAlign: 'center' }}>
-              Add widgets to visualize your data
-            </p>
-            <button
-              onClick={handleAddWidget}
+      {template ? (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(12, 1fr)",
+            gap: "16px",
+            minHeight: "400px",
+          }}
+        >
+          {template.widgets.map((widget) => (
+            <div
+              key={widget.id}
               style={{
-                padding: '12px 24px',
-                backgroundColor: '#007bff',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
+                gridColumn: `span ${widget.span}`,
+                minHeight: "200px",
               }}
             >
-              Add Your First Widget
-            </button>
-          </div>
-        ) : (
-          widgets.map(widget => (
-            <div key={widget.id} style={{ minHeight: '200px' }}>
-              <MockWidget
+              <DashboardWidget
                 widget={widget}
-                onEdit={handleEditWidget}
-                onDelete={handleDeleteWidget}
-                canEdit={canEdit}
+                widgetData={widgetData}
+                dateRange={dateRange}
               />
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "60px",
+            border: "2px dashed #ccc",
+            borderRadius: "8px",
+            color: "#666",
+          }}
+        >
+          <div style={{ fontSize: "2rem", marginBottom: "16px" }}>📊</div>
+          <h3 style={{ margin: "0 0 8px 0" }}>사용자 생성 대시보드</h3>
+          <p style={{ margin: "0 0 16px 0", textAlign: "center" }}>
+            위젯팀과 협업하여 동적 위젯 시스템 연동 필요
+          </p>
+          {canEdit && (
+            <button
+              onClick={() => alert("위젯팀 협업 후 구현 예정")}
+              style={{
+                padding: "12px 24px",
+                backgroundColor: "#007bff",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+              }}
+            >
+              위젯 관리
+            </button>
+          )}
+        </div>
+      )}
 
-      {/* 위젯 선택 다이얼로그 */}
-      <SelectWidgetDialog
-        open={isWidgetDialogOpen}
-        onClose={() => setIsWidgetDialogOpen(false)}
-        onSelectWidget={handleSelectWidget}
-      />
+      {/* 개발 정보 표시 - BaseTimeSeriesChart 테스트 정보 추가 */}
+      {import.meta.env.DEV && (
+        <div
+          style={{
+            marginTop: "40px",
+            padding: "16px",
+            backgroundColor: "#f0f8ff",
+            borderRadius: "4px",
+            border: "1px solid #e0f0ff",
+          }}
+        >
+          <h4 style={{ margin: "0 0 8px 0", color: "#0066cc" }}>
+            🔧 단계적 API 연동 진행중 - BaseTimeSeriesChart 활성화!
+          </h4>
+          <div style={{ fontSize: "12px", fontFamily: "monospace" }}>
+            📊 총 위젯: {loadingStats.total}개
+            <br />
+            🟢 실제 API: {loadingStats.success}개
+            <br />
+            🔴 API 실패: {loadingStats.failed}개
+            <br />
+            🔵 목업 데이터: {loadingStats.mock}개
+            <br />
+            ⚪ 빈 상태: {loadingStats.empty}개
+            <br />
+            <br />
+            <strong>✅ 활성화된 컴포넌트:</strong>
+            <br />
+            • TotalMetric (실제 API 연동 완료)
+            <br />
+            • BaseTimeSeriesChart (새로 활성화, 안전한 래퍼 적용)
+            <br />
+            <br />
+            <strong>🔍 BaseTimeSeriesChart 디버깅:</strong>
+            <br />
+            • 브라우저 콘솔에서 "BaseTimeSeriesChart" 검색으로 로그 확인
+            <br />
+            • 데이터 구조 검증: {`[{ts, values: [{label, value}]}]`}
+            <br />
+            • 에러 발생 시 SafeBaseTimeSeriesChart가 안전하게 처리
+            <br />
+            <br />
+            <strong>API 테스트 방법:</strong>
+            <br />
+            1. 브라우저 콘솔에서: window.dashboardHook = useDashboardDetail('{dashboardId}')
+            <br />
+            2. console.log(window.dashboardHook.widgetData)
+            <br />
+            3. console.log(window.dashboardHook._REAL_API_COMPONENTS)
+          </div>
+        </div>
+      )}
     </div>
   );
 }

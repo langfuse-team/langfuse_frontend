@@ -1,19 +1,19 @@
 import React from 'react';
-import { NoDataOrLoading } from '../../../components/NoDataOrLoading';
-import { BaseTimeSeriesChart } from './BaseTimeSeriesChart';
-import { DashboardCard } from './cards/DashboardCard';
+import NoDataOrLoading from './NoDataOrLoading';
+import BaseTimeSeriesChart from './BaseTimeSeriesChart';
+import DashboardCard from './cards/DashboardCard';
 import {
-  // extractTimeSeriesData, - API 연동 시 사용 예정
-  // fillMissingValuesAndTransform - API 연동 시 사용 예정
-  isEmptyTimeSeries,
+ // extractTimeSeriesData, - API 연동 시 사용 예정
+ // fillMissingValuesAndTransform - API 연동 시 사용 예정
+ isEmptyTimeSeries,
 } from './hooks';
-import { TabComponent } from './TabsComponent';
-import { TotalMetric } from './TotalMetric';
-import { totalCostDashboardFormatted } from '../lib/dashboard-utils';
-import { compactNumberFormatter } from '../../../utils/numbers';
+import TabComponent from './TabsComponent';
+import TotalMetric from './TotalMetric';
+import { totalCostDashboardFormatted } from './libs/dashboard-utils';
+import { compactNumberFormatter } from '../utils/numbers';
 import {
-  ModelSelectorPopover,
-  useModelSelection,
+ ModelSelectorPopover,
+ useModelSelection,
 } from './ModelSelector';
 
 /**
@@ -28,7 +28,7 @@ import {
  * @param {Object} props.userAndEnvFilterState - 사용자/환경 필터 상태
  * @param {boolean} props.isLoading - 로딩 상태
  */
-export const ModelUsageChart = ({
+const ModelUsageChart = ({
   className,
   projectId,
   globalFilterState,
@@ -203,3 +203,5 @@ export const ModelUsageChart = ({
     </DashboardCard>
   );
 };
+
+export default ModelUsageChart;

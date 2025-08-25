@@ -7,7 +7,7 @@ import React, { useState } from 'react';
  * @param {string} props.tabs[].tabTitle - 탭 제목
  * @param {React.ReactNode} props.tabs[].content - 탭 내용
  */
-export const TabComponent = ({ tabs }) => {
+const TabComponent = ({ tabs }) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   // Mock PostHog capture 함수

@@ -12,9 +12,9 @@ import {
   ResponsiveContainer 
 } from 'recharts';
 import { getColorsForCategories } from '../utils/getColorsForCategories';
-import { compactNumberFormatter } from '../../../utils/numbers';
-import { dashboardDateRangeAggregationSettings } from '../../../utils/date-range-utils';
-import { Tooltip } from './Tooltip';
+import { compactNumberFormatter } from '../utils/numbers';  
+import { dashboardDateRangeAggregationSettings } from '../utils/date-range-utils';
+import Tooltip from './Tooltip';
 
 /**
  * 시계열 차트 데이터 포인트 타입 (JSDoc으로 대체)
@@ -34,7 +34,7 @@ import { Tooltip } from './Tooltip';
  * @param {function} props.valueFormatter - 값 포맷터 함수
  * @param {string} props.chartType - 차트 타입 ("line" | "area")
  */
-export function BaseTimeSeriesChart(props) {
+const BaseTimeSeriesChart = (props) => {
   const {
     className = '',
     agg,
@@ -45,61 +45,116 @@ export function BaseTimeSeriesChart(props) {
     chartType = 'line'
   } = props;
 
-  // 모든 라벨 추출
-  const labels = new Set(
-    data.flatMap((d) => d.values.map((v) => v.label))
-  );
+  console.log('BaseTimeSeriesChart 받은 데이터:', data);
+
+  // 안전한 데이터 검증
+  const safeData = useMemo(() => {
+    if (!Array.isArray(data)) {
+      console.warn('BaseTimeSeriesChart: data가 배열이 아닙니다:', data);
+      return [];
+    }
+
+    return data.filter(d => {
+      // 필수 구조 검증
+      if (!d || typeof d.ts === 'undefined') {
+        console.warn('BaseTimeSeriesChart: 잘못된 데이터 포인트 (ts 없음):', d);
+        return false;
+      }
+      
+      if (!Array.isArray(d.values)) {
+        console.warn('BaseTimeSeriesChart: 잘못된 데이터 포인트 (values가 배열이 아님):', d);
+        return false;
+      }
+
+      return true;
+    });
+  }, [data]);
+
+  // 모든 라벨 추출 (안전하게)
+  const labels = useMemo(() => {
+    if (safeData.length === 0) return new Set();
+    
+    try {
+      const labelSet = new Set();
+      safeData.forEach(d => {
+        if (d.values && Array.isArray(d.values)) {
+          d.values.forEach(v => {
+            if (v && typeof v.label === 'string') {
+              labelSet.add(v.label);
+            }
+          });
+        }
+      });
+      return labelSet;
+    } catch (error) {
+      console.error('BaseTimeSeriesChart: 라벨 추출 중 에러:', error);
+      return new Set();
+    }
+  }, [safeData]);
 
   /**
    * 데이터 배열을 Recharts 형식으로 변환
    */
-  function transformArray(array) {
+  const transformArray = (array) => {
     return array.map((item) => {
       const outputObject = {
         timestamp: convertDate(item.ts, agg),
       };
 
-      item.values.forEach((valueObject) => {
-        outputObject[valueObject.label] = valueObject.value;
-      });
+      // 안전하게 값 추가
+      if (item.values && Array.isArray(item.values)) {
+        item.values.forEach((valueObject) => {
+          if (valueObject && typeof valueObject.label === 'string') {
+            outputObject[valueObject.label] = valueObject.value || 0;
+          }
+        });
+      }
 
       return outputObject;
     });
-  }
+  };
 
   /**
    * 타임스탬프를 날짜 문자열로 변환
    */
   const convertDate = (date, agg) => {
-    const aggSettings = dashboardDateRangeAggregationSettings[agg];
-    if (!aggSettings) return new Date(date).toLocaleDateString("en-US");
-    
-    const showMinutes = ["minute", "hour"].includes(aggSettings.date_trunc);
+    try {
+      const aggSettings = dashboardDateRangeAggregationSettings?.[agg];
+      if (!aggSettings) return new Date(date).toLocaleDateString("en-US");
+      
+      const showMinutes = ["minute", "hour"].includes(aggSettings.date_trunc);
 
-    if (showMinutes) {
-      return new Date(date).toLocaleTimeString("en-US", {
+      if (showMinutes) {
+        return new Date(date).toLocaleTimeString("en-US", {
+          year: "2-digit",
+          month: "numeric", 
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+      return new Date(date).toLocaleDateString("en-US", {
         year: "2-digit",
-        month: "numeric", 
+        month: "numeric",
         day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
       });
+    } catch (error) {
+      console.error('BaseTimeSeriesChart: 날짜 변환 에러:', error);
+      return 'Invalid Date';
     }
-    return new Date(date).toLocaleDateString("en-US", {
-      year: "2-digit",
-      month: "numeric",
-      day: "numeric",
-    });
   };
 
   // 색상 배열 생성
   const colors = getColorsForCategories(Array.from(labels));
   
   // 색상 매핑 객체 생성
-  const colorMap = {};
-  Array.from(labels).forEach((label, index) => {
-    colorMap[label] = getColorCode(colors[index] || 'blue');
-  });
+  const colorMap = useMemo(() => {
+    const map = {};
+    Array.from(labels).forEach((label, index) => {
+      map[label] = getColorCode(colors[index] || 'blue');
+    });
+    return map;
+  }, [labels, colors]);
 
   /**
    * 색상 이름을 실제 컬러 코드로 변환
@@ -134,26 +189,41 @@ export function BaseTimeSeriesChart(props) {
 
   // 동적 최대값 계산 (10% 버퍼 추가)
   const dynamicMaxValue = useMemo(() => {
-    if (data.length === 0) return undefined;
+    if (safeData.length === 0) return undefined;
 
-    const maxValue = Math.max(
-      ...data.flatMap((point) => point.values.map((v) => v.value || 0))
-    );
+    try {
+      const values = safeData.flatMap((point) => 
+        point.values?.map((v) => v.value || 0) || []
+      ).filter(v => typeof v === 'number' && !isNaN(v));
 
-    if (maxValue <= 0) return undefined;
+      if (values.length === 0) return undefined;
 
-    // 10% 버퍼 추가
-    const bufferedValue = maxValue * 1.1;
+      const maxValue = Math.max(...values);
+      if (maxValue <= 0) return undefined;
 
-    // 자릿수 기반 반올림
-    const magnitude = Math.floor(Math.log10(bufferedValue));
-    const roundTo = Math.max(1, Math.pow(10, magnitude) / 5);
+      // 10% 버퍼 추가
+      const bufferedValue = maxValue * 1.1;
 
-    return Math.ceil(bufferedValue / roundTo) * roundTo;
-  }, [data]);
+      // 자릿수 기반 반올림
+      const magnitude = Math.floor(Math.log10(bufferedValue));
+      const roundTo = Math.max(1, Math.pow(10, magnitude) / 5);
+
+      return Math.ceil(bufferedValue / roundTo) * roundTo;
+    } catch (error) {
+      console.error('BaseTimeSeriesChart: 최대값 계산 에러:', error);
+      return undefined;
+    }
+  }, [safeData]);
 
   // 변환된 데이터
-  const chartData = transformArray(data);
+  const chartData = useMemo(() => {
+    try {
+      return transformArray(safeData);
+    } catch (error) {
+      console.error('BaseTimeSeriesChart: 데이터 변환 에러:', error);
+      return [];
+    }
+  }, [safeData, agg]);
 
   // 커스텀 툴팁 컴포넌트
   const CustomTooltip = ({ active, payload, label }) => {
@@ -175,6 +245,27 @@ export function BaseTimeSeriesChart(props) {
     margin: { top: 5, right: 30, left: 20, bottom: 5 }
   };
 
+  // 로딩 상태 처리
+  if (safeData.length === 0) {
+    return (
+      <div 
+        style={{ marginTop: '16px' }}
+        className={className}
+      >
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '200px',
+          color: '#6b7280',
+          fontSize: '0.875rem'
+        }}>
+          No data available
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div 
       style={{ marginTop: '16px' }}
@@ -189,7 +280,7 @@ export function BaseTimeSeriesChart(props) {
           color: '#6b7280',
           fontSize: '0.875rem'
         }}>
-          No data
+          Data processing error
         </div>
       ) : (
         <ResponsiveContainer width="100%" height={300}>

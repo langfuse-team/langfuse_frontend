@@ -279,14 +279,14 @@ function DialogFooter({ children }) {
  * @param {string} props.initialName - 초기 이름
  * @param {string} props.initialDescription - 초기 설명
  */
-export function EditDashboardDialog({
+const EditDashboardDialog = ({
   open,
   onOpenChange,
   projectId,
   dashboardId,
   initialName,
   initialDescription,
-}) {
+}) => {
   const [name, setName] = useState(initialName || '');
   const [description, setDescription] = useState(initialDescription || '');
   const [isLoading, setIsLoading] = useState(false);
