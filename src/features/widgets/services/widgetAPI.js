@@ -1,5 +1,5 @@
 // src/services/widgetAPI.js
-// Langfuse tRPC를 REST API로 변환한 서비스
+// Langfuse tRPC API 완전 호환 버전
 
 const API_CONFIG = {
   BASE_URL: '', // 빈 문자열로 설정 (프록시 사용)
@@ -21,83 +21,91 @@ class WidgetAPI {
   }
 
   /**
-   * tRPC 엔드포인트를 REST처럼 호출하는 헬퍼
-   * tRPC의 복잡한 형식을 숨기고 REST처럼 사용
+   * tRPC GET 요청 (배치 형식)
    */
-  async callTRPCAsREST(endpoint, method = 'GET', data = null) {
+  async callTRPCGet(endpoint, data = null) {
     try {
-      if (method === 'GET') {
-        // GET 요청: tRPC 형식으로 변환
-        const params = new URLSearchParams({
-          batch: '1',
-          input: JSON.stringify({
-            0: { json: data }
-          })
-        });
-        
-        const response = await fetch(
-          `${this.baseURL}/api/trpc/${endpoint}?${params}`,
-          {
-            method: 'GET',
-            headers: this.getHeaders(),
-            credentials: 'include',
-          }
-        );
+      const input = {
+        json: data,
+        meta: data && Object.keys(data).some(key => data[key] === undefined) 
+          ? { values: Object.keys(data).filter(key => data[key] === undefined).reduce((acc, key) => ({...acc, [key]: ["undefined"]}), {}) }
+          : undefined
+      };
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`API 오류 (${endpoint}):`, errorText);
-          throw new Error(`API 오류: ${response.status}`);
+      const params = new URLSearchParams({
+        input: JSON.stringify(input)
+      });
+      
+      const response = await fetch(
+        `${this.baseURL}/api/trpc/${endpoint}?${params}`,
+        {
+          method: 'GET',
+          headers: this.getHeaders(),
+          credentials: 'include',
         }
+      );
 
-        const result = await response.json();
-        // tRPC 응답에서 실제 데이터 추출
-        return result[0]?.result?.data?.json || null;
-        
-      } else {
-        // POST 요청
-        const response = await fetch(
-          `${this.baseURL}/api/trpc/${endpoint}`,
-          {
-            method: 'POST',
-            headers: this.getHeaders(),
-            credentials: 'include',
-            body: JSON.stringify({ json: data }),
-          }
-        );
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`API 오류 (${endpoint}):`, errorText);
-          throw new Error(`API 오류: ${response.status}`);
-        }
-
-        const result = await response.json();
-        // tRPC 응답에서 실제 데이터 추출
-        return result?.result?.data?.json || null;
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`tRPC GET 오류 (${endpoint}):`, response.status, errorText);
+        throw new Error(`API 오류: ${response.status} - ${errorText}`);
       }
+
+      const result = await response.json();
+      return result?.result?.data?.json || result?.result?.data || result;
+      
     } catch (error) {
-      console.error(`REST API 호출 오류 (${endpoint}):`, error);
+      console.error(`tRPC GET 요청 실패 (${endpoint}):`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * tRPC POST 요청
+   */
+  async callTRPCPost(endpoint, data = null) {
+    try {
+      const body = data ? { json: data } : undefined;
+
+      const response = await fetch(
+        `${this.baseURL}/api/trpc/${endpoint}`,
+        {
+          method: 'POST',
+          headers: this.getHeaders(),
+          credentials: 'include',
+          body: JSON.stringify(body),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`tRPC POST 오류 (${endpoint}):`, response.status, errorText);
+        throw new Error(`API 오류: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      return result?.result?.data?.json || result?.result?.data || result;
+      
+    } catch (error) {
+      console.error(`tRPC POST 요청 실패 (${endpoint}):`, error);
       throw error;
     }
   }
 
   // ============================================
-  // REST API 메서드들 (실제 API만 사용, 더미 데이터 없음)
+  // Widget CRUD Operations
   // ============================================
 
   /**
-   * GET /widgets
-   * 위젯 목록 조회
+   * 위젯 목록 조회 - dashboardWidgets.all
    */
   async getWidgets(currentPage = 1, itemsPerPage = 50) {
     try {
       console.log('위젯 목록 조회 시작:', { currentPage, itemsPerPage });
       
-      // tRPC는 0-based pagination
-      const page = currentPage - 1;
+      const page = currentPage - 1; // 0-based pagination
       
-      const data = await this.callTRPCAsREST('dashboardWidgets.all', 'GET', {
+      const data = await this.callTRPCGet('dashboardWidgets.all', {
         projectId: this.projectId,
         page,
         limit: itemsPerPage,
@@ -109,17 +117,37 @@ class WidgetAPI {
       }
 
       console.log('위젯 데이터 수신:', data);
+      console.log('첫 번째 위젯 원본 데이터:', data.widgets?.[0]);
 
-      // 위젯 데이터 변환
-      const widgets = (data.widgets || []).map(widget => ({
-        id: widget.id,
-        name: widget.name || 'Unnamed Widget',
-        description: widget.description || '',
-        viewType: widget.query?.view || 'traces',
-        chartType: this.convertChartTypeToComponent(widget.query?.chartConfig?.type),
-        createdAt: widget.createdAt,
-        updatedAt: widget.updatedAt,
-      }));
+      const widgets = (data.widgets || []).map(widget => {
+        console.log('위젯 변환 중:', {
+          id: widget.id,
+          name: widget.name,
+          query: widget.query,
+          chartConfig: widget.chartConfig,
+          view: widget.view
+        });
+        
+        return {
+          id: widget.id,
+          name: widget.name || 'Unnamed Widget',
+          description: widget.description || '',
+          // query 객체에서 데이터 추출
+          viewType: widget.query?.view || widget.view || 'traces',
+          chartType: this.convertChartTypeToComponent(
+            widget.query?.chartConfig?.type || 
+            widget.chartConfig?.type || 
+            widget.chartType || 
+            'LINE_TIME_SERIES'
+          ),
+          createdAt: widget.createdAt,
+          updatedAt: widget.updatedAt,
+          // 원본 데이터도 보관 (디버깅용)
+          rawData: widget
+        };
+      });
+
+      console.log('변환된 위젯 데이터:', widgets);
 
       return {
         success: true,
@@ -144,46 +172,60 @@ class WidgetAPI {
         data: [],
         totalItems: 0,
         currentPage: currentPage,
-        totalPages: 0,
-        meta: {
-          totalItems: 0,
-          currentPage: currentPage,
-          totalPages: 0
-        }
+        totalPages: 0
       };
     }
   }
 
   /**
-   * POST /widgets
-   * 위젯 생성
+   * 위젯 생성 - dashboardWidgets.create
    */
   async createWidget(widgetData) {
     try {
       console.log('위젯 생성 요청:', widgetData);
 
-      // metrics 형식 변환
-      const metrics = widgetData.metrics?.map(m => ({
-        measure: m.columnId || m.measure || 'count',
-        aggregation: m.aggregation || 'count'
-      })) || [{ measure: 'count', aggregation: 'count' }];
+      // dimensions 변환 (빈 배열이라도 반드시 배열이어야 함)
+      const dimensions = Array.isArray(widgetData.dimensions) && widgetData.dimensions.length > 0
+        ? this.convertDimensionsToAPI(widgetData.dimensions)
+        : [];
 
-      // REST → tRPC 형식 변환
+      // metrics 변환 (반드시 배열이어야 함)
+      const metrics = Array.isArray(widgetData.metrics) && widgetData.metrics.length > 0
+        ? this.convertMetricsToAPI(widgetData.metrics)
+        : [{ measure: 'count', agg: 'count' }]; // agg로 변경!
+
+      // filters 변환 (빈 배열이라도 반드시 배열이어야 함)
+      const filters = Array.isArray(widgetData.filters) ? widgetData.filters : [];
+
+      // view 확실히 설정
+      const view = widgetData.view || 'traces';
+
+      // chartType 확실히 변환
+      const chartType = this.convertChartTypeToAPI(widgetData.chartType || 'line');
+
+      // Langfuse API 형식에 정확히 맞게 변환
       const payload = {
         projectId: this.projectId,
-        dashboardId: widgetData.dashboardId || 'default',
-        name: widgetData.name,
+        dashboardId: widgetData.dashboardId || null,
+        name: widgetData.name || 'New Widget',
         description: widgetData.description || '',
-        query: {
-          view: widgetData.view || 'traces',
-          dimensions: widgetData.dimensions || [],
-          metrics: metrics,
-          filters: widgetData.filters || [],
-          timeDimension: widgetData.timeDimension || null,
-          chartConfig: {
-            type: this.convertChartTypeToAPI(widgetData.chartType)
-          }
+        view: view, // 최상위 레벨에도 view 추가
+        dimensions: dimensions, // 최상위 레벨에도 dimensions 추가
+        metrics: metrics, // 최상위 레벨에도 metrics 추가
+        filters: filters, // 최상위 레벨에도 filters 추가
+        chartType: chartType, // 최상위 레벨에 chartType 추가
+        chartConfig: {
+          type: chartType,
+          ...(chartType === 'PIVOT_TABLE' ? {
+            dimensions: [],
+            row_limit: 100,
+            defaultSort: null
+          } : {})
         },
+        timeDimension: this.isTimeSeriesChart(chartType) ? { granularity: 'auto' } : null,
+        fromTimestamp: widgetData.dateRange?.from?.toISOString() || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+        toTimestamp: widgetData.dateRange?.to?.toISOString() || new Date().toISOString(),
+        orderBy: null,
         position: widgetData.position || {
           x: 0,
           y: 0,
@@ -192,7 +234,9 @@ class WidgetAPI {
         }
       };
 
-      const data = await this.callTRPCAsREST('dashboardWidgets.create', 'POST', payload);
+      console.log('위젯 생성 페이로드:', JSON.stringify(payload, null, 2));
+
+      const data = await this.callTRPCPost('dashboardWidgets.create', payload);
       
       if (!data) {
         throw new Error('위젯 생성 응답을 받지 못했습니다');
@@ -217,14 +261,13 @@ class WidgetAPI {
   }
 
   /**
-   * DELETE /widgets/:id
-   * 위젯 삭제
+   * 위젯 삭제 - dashboardWidgets.delete
    */
   async deleteWidget(widgetId) {
     try {
       console.log('위젯 삭제 요청:', widgetId);
 
-      const data = await this.callTRPCAsREST('dashboardWidgets.delete', 'POST', {
+      const data = await this.callTRPCPost('dashboardWidgets.delete', {
         projectId: this.projectId,
         widgetId: widgetId
       });
@@ -246,54 +289,22 @@ class WidgetAPI {
     }
   }
 
-  /**
-   * PUT /widgets/:id
-   * 위젯 수정
-   */
-  async updateWidget(widgetId, updateData) {
-    try {
-      console.log('위젯 수정 요청:', { widgetId, updateData });
-
-      const payload = {
-        projectId: this.projectId,
-        widgetId: widgetId,
-        ...updateData
-      };
-
-      const data = await this.callTRPCAsREST('dashboardWidgets.update', 'POST', payload);
-
-      if (!data) {
-        throw new Error('위젯 수정 응답을 받지 못했습니다');
-      }
-
-      console.log('위젯 수정 성공:', data);
-
-      return {
-        success: true,
-        data: data
-      };
-      
-    } catch (error) {
-      console.error('위젯 수정 실패:', error);
-      
-      return {
-        success: false,
-        error: error.message
-      };
-    }
-  }
+  // ============================================
+  // Dashboard Query Execution
+  // ============================================
 
   /**
-   * POST /execute-query
-   * 대시보드 쿼리 실행 (차트 데이터 조회)
+   * 대시보드 쿼리 실행 - dashboard.executeQuery
    */
   async executeQuery({
     view = 'traces',
-    metrics = [{ measure: 'count', aggregation: 'count' }],
+    dimensions = [],
+    metrics = [{ measure: 'count', agg: 'count' }], // agg로 변경!
     filters = [],
     fromTimestamp,
     toTimestamp,
-    chartType = 'LINE_TIME_SERIES'
+    chartType = 'LINE_TIME_SERIES',
+    timeDimension = null
   }) {
     try {
       console.log('쿼리 실행:', { view, metrics, chartType });
@@ -302,18 +313,20 @@ class WidgetAPI {
         projectId: this.projectId,
         query: {
           view,
-          dimensions: [],
-          metrics,
+          dimensions: this.convertDimensionsToAPI(dimensions),
+          metrics: this.convertMetricsToAPI(metrics),
           filters,
-          timeDimension: null,
-          fromTimestamp,
-          toTimestamp,
+          timeDimension: timeDimension || (this.isTimeSeriesChart(chartType) ? { granularity: 'auto' } : null),
+          fromTimestamp: fromTimestamp || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          toTimestamp: toTimestamp || new Date().toISOString(),
           orderBy: null,
-          chartConfig: { type: chartType }
+          chartConfig: this.buildChartConfig(chartType)
         }
       };
 
-      const data = await this.callTRPCAsREST('dashboard.executeQuery', 'GET', query);
+      console.log('쿼리 실행 페이로드:', JSON.stringify(query, null, 2));
+
+      const data = await this.callTRPCGet('dashboard.executeQuery', query);
 
       if (!data) {
         throw new Error('쿼리 실행 결과를 받지 못했습니다');
@@ -345,8 +358,7 @@ class WidgetAPI {
   }
 
   /**
-   * GET /metrics-preview
-   * 미리보기용 메트릭 데이터 (NewWidgetPage 호환)
+   * 미리보기용 메트릭 데이터 조회
    */
   async getMetricsPreview({
     view = 'traces',
@@ -362,7 +374,7 @@ class WidgetAPI {
 
       const metrics = [{
         measure: metric === 'count' ? 'count' : metric,
-        aggregation: aggregation || 'count'
+        agg: aggregation || 'count' // agg로 변경!
       }];
 
       const result = await this.executeQuery({
@@ -371,7 +383,8 @@ class WidgetAPI {
         filters,
         fromTimestamp: from,
         toTimestamp: to,
-        chartType: 'LINE_TIME_SERIES'
+        chartType: 'LINE_TIME_SERIES',
+        timeDimension: { granularity: 'auto' }
       });
 
       if (result.success && result.data.chartData) {
@@ -384,7 +397,6 @@ class WidgetAPI {
         };
       }
 
-      // 실패시 빈 데이터 반환 (더미 데이터 없음)
       return {
         count: 0,
         chartData: []
@@ -400,15 +412,18 @@ class WidgetAPI {
     }
   }
 
+  // ============================================
+  // Filter Options
+  // ============================================
+
   /**
-   * GET /filter-options/traces
-   * Traces 필터 옵션 조회
+   * Traces 필터 옵션 조회 - traces.filterOptions
    */
   async getTraceFilterOptions() {
     try {
       console.log('Trace 필터 옵션 조회');
       
-      const data = await this.callTRPCAsREST('traces.filterOptions', 'GET', {
+      const data = await this.callTRPCGet('traces.filterOptions', {
         projectId: this.projectId
       });
 
@@ -416,15 +431,7 @@ class WidgetAPI {
 
       return {
         success: true,
-        data: data || {
-          name: [],
-          userId: [],
-          sessionId: [],
-          release: [],
-          version: [],
-          tags: [],
-          scores: []
-        }
+        data: data || {}
       };
       
     } catch (error) {
@@ -439,14 +446,13 @@ class WidgetAPI {
   }
 
   /**
-   * GET /filter-options/environment
-   * 환경 필터 옵션 조회
+   * 환경 필터 옵션 조회 - projects.environmentFilterOptions
    */
   async getEnvironmentFilterOptions() {
     try {
       console.log('환경 필터 옵션 조회');
       
-      const data = await this.callTRPCAsREST('projects.environmentFilterOptions', 'GET', {
+      const data = await this.callTRPCGet('projects.environmentFilterOptions', {
         projectId: this.projectId
       });
 
@@ -454,12 +460,7 @@ class WidgetAPI {
 
       return {
         success: true,
-        data: data || {
-          environments: [],
-          tags: [],
-          models: [],
-          promptNames: []
-        }
+        data: data || {}
       };
       
     } catch (error) {
@@ -473,46 +474,94 @@ class WidgetAPI {
     }
   }
 
+  // ============================================
+  // Utility Methods - API 형식 변환
+  // ============================================
+
   /**
-   * GET /dashboards
-   * 대시보드 목록 조회
+   * Dimensions 배열을 API 형식으로 변환
    */
-  async getDashboards(page = 0, limit = 100) {
-    try {
-      console.log('대시보드 목록 조회');
-      
-      const data = await this.callTRPCAsREST('dashboard.allDashboards', 'GET', {
-        projectId: this.projectId,
-        page,
-        limit,
-        orderBy: { column: 'updatedAt', order: 'DESC' }
-      });
-
-      console.log('대시보드 목록:', data);
-
-      return {
-        success: true,
-        data: data?.dashboards || [],
-        meta: {
-          totalCount: data?.totalCount || 0,
-          hasMore: data?.hasMore || false
-        }
-      };
-      
-    } catch (error) {
-      console.error('대시보드 목록 조회 실패:', error);
-      
-      return {
-        success: false,
-        error: error.message,
-        data: []
-      };
+  convertDimensionsToAPI(dimensions) {
+    if (!Array.isArray(dimensions)) {
+      return [];
     }
+    
+    return dimensions.map(dim => {
+      if (typeof dim === 'string') {
+        return { field: dim };
+      }
+      return { field: dim.field || dim };
+    });
   }
 
-  // ============================================
-  // 유틸리티 메서드들
-  // ============================================
+  /**
+   * Metrics 배열을 API 형식으로 변환
+   */
+  convertMetricsToAPI(metrics) {
+    if (!Array.isArray(metrics)) {
+      return [{ measure: 'count', agg: 'count' }]; // agg로 변경!
+    }
+    
+    return metrics.map(metric => ({
+      measure: metric.columnId || metric.measure || 'count',
+      agg: metric.aggregation || metric.agg || 'count' // agg로 변경!
+    }));
+  }
+
+  /**
+   * TimeDimension 설정
+   */
+  getTimeDimension(widgetData) {
+    if (this.isTimeSeriesChart(widgetData.chartType)) {
+      return { granularity: 'auto' };
+    }
+    return null;
+  }
+
+  /**
+   * ChartConfig 구성
+   */
+  getChartConfig(widgetData) {
+    const chartType = this.convertChartTypeToAPI(widgetData.chartType);
+    
+    const config = {
+      type: chartType
+    };
+
+    // PIVOT_TABLE인 경우 추가 설정
+    if (chartType === 'PIVOT_TABLE') {
+      config.dimensions = [];
+      config.row_limit = 100;
+      config.defaultSort = undefined;
+    }
+
+    return config;
+  }
+
+  /**
+   * ChartConfig 빌드 (쿼리 실행용)
+   */
+  buildChartConfig(chartType) {
+    const config = {
+      type: chartType
+    };
+
+    if (chartType === 'PIVOT_TABLE') {
+      config.dimensions = [];
+      config.row_limit = 100;
+      config.defaultSort = undefined;
+    }
+
+    return config;
+  }
+
+  /**
+   * 시계열 차트인지 확인
+   */
+  isTimeSeriesChart(chartType) {
+    const timeSeriesTypes = ['line', 'bar', 'area', 'LINE_TIME_SERIES', 'BAR_TIME_SERIES', 'VERTICAL_BAR'];
+    return timeSeriesTypes.includes(chartType);
+  }
 
   /**
    * 컴포넌트 차트 타입 → API 차트 타입
@@ -520,10 +569,14 @@ class WidgetAPI {
   convertChartTypeToAPI(type) {
     const mapping = {
       'line': 'LINE_TIME_SERIES',
-      'bar': 'BAR_CHART',
+      'vertical-bar': 'VERTICAL_BAR', // VERTICAL_BAR로 수정
+      'bar': 'VERTICAL_BAR', // VERTICAL_BAR로 수정
       'area': 'LINE_TIME_SERIES',
       'number': 'NUMBER',
-      'table': 'TABLE'
+      'horizontal-bar': 'HORIZONTAL_BAR',
+      'histogram': 'HISTOGRAM',
+      'pie': 'PIE',
+      'table': 'PIVOT_TABLE'
     };
     return mapping[type] || 'NUMBER';
   }
@@ -534,13 +587,20 @@ class WidgetAPI {
   convertChartTypeToComponent(type) {
     const mapping = {
       'LINE_TIME_SERIES': 'line',
-      'BAR_CHART': 'bar',
+      'BAR_TIME_SERIES': 'bar',
+      'VERTICAL_BAR': 'bar', // VERTICAL_BAR 추가
       'NUMBER': 'number',
-      'TABLE': 'table',
-      'PIE_CHART': 'pie'
+      'HORIZONTAL_BAR': 'horizontal-bar',
+      'HISTOGRAM': 'histogram',
+      'PIE': 'pie',
+      'PIVOT_TABLE': 'table'
     };
     return mapping[type] || 'line';
   }
+
+  // ============================================
+  // Static Data Methods (unchanged)
+  // ============================================
 
   getAvailableViews() {
     return [
